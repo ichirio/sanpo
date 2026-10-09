@@ -1,0 +1,14 @@
+^\.git$
+^\.github$
+^\.gitignore$
+^\.lintr$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^LICENSE\.md$
+^AGENTS\.md$
+^CONTRIBUTING\.md$
+^.*\.Rcheck$
+^.*\.tar\.gz$
+^.*\.Rproj$
+^\.Rproj\.user$
