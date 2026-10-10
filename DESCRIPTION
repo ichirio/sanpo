@@ -1,0 +1,33 @@
+Package: sanpo
+Title: Plots for Epidemiology on Japanese Claims and Medical Databases
+Version: 0.0.0.9000
+Authors@R: 
+    person(given  = "Yoichi",
+           family = "Masui",
+           email  = "ichi.r.pro@gmail.com",
+           role   = c("aut", "cre", "cph"))
+Description: Static 'ggplot2' figures for epidemiological studies on claims
+    and medical databases, with Japanese data in mind: the patient journey
+    from treatment-pathway Sankey diagrams (which also draw nodes without
+    links) and sunbursts to trends, age pyramids, rates, forest plots and
+    survival curves. Each figure is a data function, a plot function and a
+    one-call wrapper of the two.
+URL: https://github.com/ichirio/sanpo
+BugReports: https://github.com/ichirio/sanpo/issues
+License: Apache License (>= 2)
+Encoding: UTF-8
+Language: en-GB
+Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.1)
+Imports:
+    ggplot2 (>= 3.5.0),
+    grDevices,
+    rlang,
+    stats,
+    utils
+Suggests:
+    patchwork,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.1
