@@ -172,7 +172,9 @@ sp_plot_km <- function(km, cumulative = FALSE, states = NULL, ci = TRUE, risk_ta
                                   data = sp_step_ribbon(cv))
   }
   p <- p + if (multi_state) {
-    ggplot2::geom_step(ggplot2::aes(linetype = .data$state), linewidth = 0.6)
+    state_lab <- function(x) ifelse(grepl("^[0-9]+$", x), paste(if (lang == "ja") "\u30a4\u30d9\u30f3\u30c8" else "Event", x), x)
+    list(ggplot2::geom_step(ggplot2::aes(linetype = .data$state), linewidth = 0.6),
+         ggplot2::scale_linetype_discrete(labels = state_lab))
   } else {
     ggplot2::geom_step(linewidth = 0.6)
   }
@@ -186,7 +188,7 @@ sp_plot_km <- function(km, cumulative = FALSE, states = NULL, ci = TRUE, risk_ta
     ggplot2::scale_y_continuous(limits = c(0, 1), expand = ggplot2::expansion(c(0, 0.02)),
                                 labels = if (percent) function(x) paste0(100 * x, "%") else ggplot2::waiver()) +
     ggplot2::scale_x_continuous(breaks = unique(km$risk$time), limits = x_lim,
-                                expand = ggplot2::expansion(c(0.01, 0.02))) +
+                                expand = ggplot2::expansion(c(0.04, 0.02))) +
     ggplot2::labs(x = time_lab %or% sp_label("time", lang),
                   y = y_lab %or% sp_label(y_default, lang), linetype = NULL) +
     sp_theme(lang = lang)
@@ -199,7 +201,7 @@ sp_plot_km <- function(km, cumulative = FALSE, states = NULL, ci = TRUE, risk_ta
   }
   rt <- sp_plot_risk_table(km, palette = pal, lang = lang)
   n_rows <- nlevels(km$risk$group)
-  patchwork::wrap_plots(p, rt, ncol = 1, heights = c(4, 0.6 + 0.35 * n_rows))
+  patchwork::wrap_plots(p + ggplot2::theme(legend.position = "top"), rt, ncol = 1, heights = c(4, 0.6 + 0.35 * n_rows))
 }
 
 #' @rdname sp_km_data
@@ -214,12 +216,14 @@ sp_plot_risk_table <- function(km, palette = NULL, lang = getOption("sanpo.lang"
     ggplot2::geom_text(ggplot2::aes(colour = .data$group), size = 3, show.legend = FALSE) +
     ggplot2::scale_colour_manual(values = rev(pal[seq_len(nlevels(rk$group))])) +
     ggplot2::scale_x_continuous(breaks = unique(rk$time), limits = c(0, max(km$curve$time)),
-                                expand = ggplot2::expansion(c(0.01, 0.02))) +
+                                expand = ggplot2::expansion(c(0.04, 0.02))) +
     ggplot2::scale_y_discrete(labels = if (km$grouped) ggplot2::waiver() else function(x) "") +
+    ggplot2::coord_cartesian(clip = "off") +
     ggplot2::labs(x = NULL, y = NULL, title = sp_label("number_at_risk", lang)) +
     sp_theme(lang = lang) +
     ggplot2::theme(panel.grid = ggplot2::element_blank(), axis.line = ggplot2::element_blank(),
                    axis.ticks = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(),
+                   axis.text.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
                    plot.title = ggplot2::element_text(size = ggplot2::rel(0.9)))
 }
 

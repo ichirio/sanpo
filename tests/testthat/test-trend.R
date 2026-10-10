@@ -50,7 +50,7 @@ test_that("sp_trend draws lines and points from the table", {
   expect_equal(tr, sp_trend_data(cl, by = "sex"))
   ld <- ggplot2::layer_data(p, which(geoms(p) == "GeomPoint"))
   expect_equal(sort(ld$y), sort(tr$value))
-  q <- sp_trend(cl, unit = "fiscal_year", lang = "ja")
+  q <- suppressWarnings(sp_trend(cl, unit = "fiscal_year", lang = "ja"))
   expect_equal(q$labels$y, sp_label("patients", "ja"))
   expect_false("GeomVline" %in% geoms(q))
 })

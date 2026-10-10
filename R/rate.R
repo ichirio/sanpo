@@ -116,7 +116,7 @@ sp_plot_rate <- function(rates, time = attr(rates, "time") %or% "period",
            "\u3042\u305f\u308a\u300195% CI\uff09")
   } else {
     paste0(if (type == "incidence") "Incidence rate" else "Prevalence", " per ", per_txt,
-           if (type == "incidence") " person-years" else " persons", " (95% CI)")
+           if (type == "incidence") " person-years" else " persons", "\n(95% CI)")
   }
   if (!is.null(attr(rates, "conf_level")) && attr(rates, "conf_level") != 0.95) {
     ylab <- sub("95%", paste0(100 * attr(rates, "conf_level"), "%"), ylab, fixed = TRUE)

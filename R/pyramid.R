@@ -86,7 +86,7 @@ sp_plot_pyramid <- function(pyramid, percent = FALSE, palette = sp_palette(2),
 
   ggplot2::ggplot(pyramid, ggplot2::aes(x = .data$signed, y = .data$age_band,
                                         fill = .data$sex_lab)) +
-    ggplot2::geom_col(width = 0.9) +
+    ggplot2::geom_col(width = 0.9, position = "identity") +
     ggplot2::geom_vline(xintercept = 0, colour = "grey30", linewidth = 0.3) +
     ggplot2::scale_x_continuous(labels = function(x) format(abs(x), big.mark = ",", trim = TRUE),
                                 limits = c(-lim, lim) * 1.05) +

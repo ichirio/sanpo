@@ -91,7 +91,8 @@ sp_plot_pref_tile <- function(tiles, label = c("name", "code", "none"),
     sp_theme(lang = lang, legend_position = "right") +
     ggplot2::theme(axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank(),
                    axis.line = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank(),
-                   panel.grid = ggplot2::element_blank())
+                   panel.grid = ggplot2::element_blank(),
+                   panel.grid.major = ggplot2::element_blank())
 }
 
 #' @rdname sp_pref_grid

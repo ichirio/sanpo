@@ -9,10 +9,10 @@ test_that("fills within the gap form one episode", {
   expect_equal(a$end[1], as.Date("2021-03-11"))
   expect_equal(a$discontinued, c(1L, 1L))
   expect_equal(a$duration[1], as.numeric(as.Date("2021-03-11") - as.Date("2021-01-01")) + 1)
-  # a gap of exactly `gap` days does not break the episode
-  ep2 <- sp_episodes(rx, gap = 9, end_date = as.Date("2021-12-31"))
+  # 10 days without supply (Jan 31 to Feb 9): gap = 10 keeps one episode
+  ep2 <- sp_episodes(rx, gap = 10, end_date = as.Date("2021-12-31"))
   expect_equal(ep2$n_fills[ep2$patient_id == "a"], 2L)
-  ep3 <- sp_episodes(rx, gap = 8, end_date = as.Date("2021-12-31"))
+  ep3 <- sp_episodes(rx, gap = 9, end_date = as.Date("2021-12-31"))
   expect_equal(ep3$n_fills[ep3$patient_id == "a"], 1L)
 })
 
