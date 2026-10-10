@@ -1,6 +1,6 @@
 Package: sanpo
 Title: Plots for Epidemiology on Japanese Claims and Medical Databases
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: 
     person(given  = "Yoichi",
            family = "Masui",
@@ -21,13 +21,21 @@ Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.1)
 Imports:
+    dplyr (>= 1.1.0),
     ggplot2 (>= 3.5.0),
     grDevices,
     rlang,
     stats,
+    survival,
+    tidyr (>= 1.2.0),
+    tools,
     utils
 Suggests:
     patchwork,
-    testthat (>= 3.0.0)
+    ragg,
+    svglite,
+    systemfonts,
+    testthat (>= 3.0.0),
+    vdiffr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1

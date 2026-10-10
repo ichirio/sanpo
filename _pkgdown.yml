@@ -10,6 +10,25 @@ reference:
       - sp_plot_sankey
       - sp_plot_sankey_batch
       - sp_plot_sunburst
+  - title: Trends, populations and rates
+    contents:
+      - sp_trend_data
+      - sp_pyramid_data
+      - sp_rate_data
+      - sp_pref_grid
+  - title: Estimates and time to event
+    contents:
+      - sp_forest_data
+      - sp_km_data
+      - sp_episodes
+  - title: Theme, colours and output
+    contents:
+      - sp_theme
+      - sp_save
+  - title: Helpers
+    contents:
+      - sp_month
   - title: Example data
     contents:
       - sp_synth_pathways
+      - sp_synth

@@ -1,0 +1,23 @@
+test_that("synthetic data have the documented shape and are reproducible", {
+  cl <- sp_synth_claims(n = 50)
+  expect_named(cl, c("patient_id", "sex", "age", "pref_code", "claim_ym"))
+  expect_true(all(cl$claim_ym >= 201904 & cl$claim_ym <= 202403))
+  expect_equal(length(unique(cl$patient_id)), 50)
+  expect_identical(cl, sp_synth_claims(n = 50))
+  expect_named(sp_synth_rates(), c("period", "sex", "events", "person_years"))
+  expect_named(sp_synth_estimates(), c("group", "label", "n", "estimate", "lower", "upper"))
+  s <- sp_synth_survival(n = 30)
+  expect_true(all(s$status_cr %in% 0:2))
+  expect_equal(s$status, as.integer(s$status_cr == 1))
+  rx <- sp_synth_rx(n = 10)
+  expect_s3_class(rx$fill_date, "Date")
+  expect_equal(nrow(sp_synth_pref()), 47)
+})
+
+test_that("a seed leaves the global random state alone", {
+  set.seed(42)
+  a <- stats::runif(1)
+  set.seed(42)
+  sp_synth_claims(n = 5)
+  expect_equal(stats::runif(1), a)
+})
