@@ -1,4 +1,4 @@
-# Contributing to sanpo
+# Contributing
 
 Issues and pull requests are welcome at <https://github.com/ichirio/sanpo>.
 
@@ -14,8 +14,8 @@ Issues and pull requests are welcome at <https://github.com/ichirio/sanpo>.
    ```r
    roxygen2::roxygenise()
    testthat::test_local()
-   rcmdcheck::rcmdcheck(args = "--as-cran")
    lintr::lint_package()
+   rcmdcheck::rcmdcheck(args = "--as-cran")   # once, at the end
    ```
 
 5. Open a pull request against `main` that references the issue. CI
@@ -28,16 +28,30 @@ Standard R scheme: a release is `X.Y.Z`, development is `X.Y.Z.9000`.
 `0.0.0.9001`) and adds an entry to `NEWS.md`. Changing `X`, `Y` or `Z` is a
 release, done by the maintainer.
 
-## Code style
+## Design and code style
 
-- Readable tidyverse style: native pipe `|>`, two-space indent, `<-`,
-  `snake_case`. `.lintr` is the reference.
-- Exported functions start with `sp_`. Column names are passed as strings.
+- The package name `sanpo` is provisional; never put it in function,
+  class or argument names.
+- Everything is built on one journey object (`class_journey`, S7) made by
+  `jn_sequence()`. Data verbs start with `jn_`, figures with `plot_`,
+  tables with `tbl_`. Column names are passed as strings.
+- Figures are static `ggplot2` objects drawn from aggregated data (flows,
+  prefix trees), with order and colours from the states dictionary
+  (`jn_states()`, `scale_fill_journey()`). Empty states stay as empty
+  nodes.
+- Readable tidyverse style: two-space indent, `<-`, `snake_case`. `.lintr`
+  is the reference.
 - R source is ASCII only; Japanese strings go in as `\uXXXX` escapes.
-- New figures follow the three layers: `sp_<fig>_data()`,
-  `sp_plot_<fig>()`, `sp_<fig>()`.
-- Examples and tests use made-up data only (`sp_synth_pathways()` or small
-  inline data frames); never real patient data.
+- Examples and tests use synthetic data only (`jn_simulate()` or small
+  inline data frames). Never real patient data and never real code masters
+  (YJ, receipt codes, ATC, disease codes); users bring their own maps.
+- New `Imports:` need agreement first (one-line reason).
+
+## Local resources
+
+Run one R process at a time and keep sessions short; install into a
+private library and keep `HOME` / `R_USER_*` in a private work folder. Run
+`R CMD check --as-cran` once, just before opening the pull request.
 
 ## License
 

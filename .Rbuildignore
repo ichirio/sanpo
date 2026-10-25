@@ -12,3 +12,4 @@
 ^.*\.tar\.gz$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^DECISIONS\.md$

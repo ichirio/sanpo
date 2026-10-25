@@ -3,13 +3,18 @@ template:
   bootstrap: 5
 
 reference:
-  - title: Treatment pathways
+  - title: Journeys
     contents:
-      - sp_sankey
-      - sp_sankey_data
-      - sp_plot_sankey
-      - sp_plot_sankey_batch
-      - sp_plot_sunburst
-  - title: Example data
+      - jn_simulate
+      - jn_sequence
+      - journey
+      - jn_states
+      - jn_flows
+      - jn_tree
+  - title: Journey plots and tables
     contents:
-      - sp_synth_pathways
+      - plot_sankey
+      - plot_tree
+      - scale_fill_journey
+      - theme_journey
+      - tbl_pathways

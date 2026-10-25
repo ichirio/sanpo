@@ -4,9 +4,9 @@
 \name{sanpo-package}
 \alias{sanpo}
 \alias{sanpo-package}
-\title{sanpo: Plots for Epidemiology on Japanese Claims and Medical Databases}
+\title{sanpo: Patient Journeys from Claims and Medical Databases}
 \description{
-Static 'ggplot2' figures for epidemiological studies on claims and medical databases, with Japanese data in mind: the patient journey from treatment-pathway Sankey diagrams (which also draw nodes without links) and sunbursts to trends, age pyramids, rates, forest plots and survival curves. Each figure is a data function, a plot function and a one-call wrapper of the two.
+Patient journeys (sanpo, 'a walk') from claims and medical databases, with Japanese data in mind. Episode data are turned into one journey object (the sequence of states per patient, a states dictionary and the parameters used), from which static 'ggplot2' Sankey diagrams, sunbursts, icicles and pathway tables are drawn with the same node order and the same colours. Empty states are kept as empty nodes.
 }
 \seealso{
 Useful links:
