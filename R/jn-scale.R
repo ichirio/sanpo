@@ -39,12 +39,14 @@ format_count_label <- function(n, pct, label) {
 
 # An invisible zero-size rectangle per level, so that the legend draws a
 # coloured key for every state, including states no patient is in.
-legend_keys_layer <- function(st) {
-  d <- data.frame(state = factor(st$level, levels = st$level), v = 0)
+# `x`, `y`: where to put it, inside the data range so that the axes do not
+# grow.
+legend_keys_layer <- function(st, x = 0, y = 0) {
+  d <- data.frame(state = factor(st$level, levels = st$level), x = x, y = y)
   ggplot2::geom_rect(
     data = d,
-    mapping = ggplot2::aes(xmin = .data$v, xmax = .data$v, ymin = .data$v,
-                           ymax = .data$v, fill = .data$state),
+    mapping = ggplot2::aes(xmin = .data$x, xmax = .data$x, ymin = .data$y,
+                           ymax = .data$y, fill = .data$state),
     colour = NA, inherit.aes = FALSE
   )
 }

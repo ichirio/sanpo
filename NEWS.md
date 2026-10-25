@@ -1,10 +1,17 @@
 # sanpo (development version)
 
+## sanpo 0.0.0.9001
+
 * First minimal journey API (package name provisional; see `DECISIONS.md`):
   `jn_simulate()` (synthetic claims-like episodes), `jn_sequence()`
   (episodes -> journey), `journey()`, `jn_states()`, `jn_flows()`,
   `jn_tree()`, `plot_sankey()`, `plot_sunburst()`, `plot_icicle()`,
   `scale_fill_journey()`, `theme_journey()` and `tbl_pathways()`.
+* The journey is an S7 class (`class_journey`) with a validator and
+  `print()`, `summary()`, `as.data.frame()` and `plot()` methods.
+* Removed the phase-0 `sp_*` functions (`sp_sankey()`, `sp_sunburst()`,
+  `sp_synth_pathways()` and their data / plot functions); use the journey
+  API instead.
 
 ## sanpo 0.0.0.9000
 

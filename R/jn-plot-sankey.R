@@ -34,9 +34,9 @@ plot_sankey <- function(j, steps = NULL, label = c("n_pct", "n", "pct", "none"),
   empty <- match.arg(empty)
   m <- jn_state_matrix(j)
   steps <- resolve_steps(steps, ncol(m))
-  N <- j$meta$n_persons
-  st <- j$states
-  special <- c(j$meta$end_state, j$meta$gap_state)
+  N <- j@n_persons
+  st <- j@states
+  special <- c(j@meta$end_state, j@meta$gap_state)
 
   # nodes --------------------------------------------------------------------
   nodes <- jn_nodes(j, steps)
@@ -109,7 +109,7 @@ plot_sankey <- function(j, steps = NULL, label = c("n_pct", "n", "pct", "none"),
       fill = grDevices::adjustcolor("white", alpha.f = 0.7),
       label.padding = ggplot2::unit(0.12, "lines")
     ), label_no_border())) +
-    legend_keys_layer(st) +
+    legend_keys_layer(st, x = 1, y = 0) +
     scale_fill_journey(st) +
     ggplot2::scale_x_continuous(
       breaks = seq_along(steps), labels = paste("Step", steps),

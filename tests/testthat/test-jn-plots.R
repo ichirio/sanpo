@@ -18,6 +18,8 @@ test_that("plot_sankey draws aggregated flows and empty nodes", {
   q <- plot_sankey(j, empty = "hide", label = "none")
   expect_equal(nrow(layer_of(q, "GeomRect")), 3 * 4 + 2)
   expect_s3_class(plot_sankey(j, steps = 1:2), "ggplot")
+  # the hidden legend keys must not widen the step axis
+  expect_gt(ggplot2::layer_scales(p)$x$range$range[1], 0.5)
 })
 
 test_that("sunburst and icicle share the tree rectangles", {
@@ -36,12 +38,12 @@ test_that("sunburst and icicle share the tree rectangles", {
 test_that("scale_fill_journey gives the same colours everywhere", {
   j <- j_demo()
   sc <- scale_fill_journey(j)
-  expect_equal(sc$limits, j$states$level)
+  expect_equal(sc$limits, j@states$level)
   fill_of <- function(p, geom) {
     d <- layer_of(p, geom)
     unique(d$fill)
   }
-  all_cols <- j$states$colour
+  all_cols <- j@states$colour
   expect_true(all(fill_of(plot_sankey(j), "GeomRect") %in% all_cols))
   expect_true(all(fill_of(plot_sunburst(j), "GeomRect") %in% all_cols))
 })

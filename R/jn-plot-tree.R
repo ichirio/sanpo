@@ -33,7 +33,7 @@ plot_sunburst <- function(j, steps = NULL, label = c("pct", "n", "n_pct", "state
   label <- match.arg(label)
   tr <- jn_tree(j, depth = steps)
   tr$text <- tree_label(tr, j, label, label_min)
-  N <- j$meta$n_persons
+  N <- j@n_persons
   D <- max(tr$depth)
   ggplot2::ggplot(tr) +
     ggplot2::geom_rect(
@@ -49,7 +49,7 @@ plot_sunburst <- function(j, steps = NULL, label = c("pct", "n", "n_pct", "state
     ggplot2::coord_radial(theta = "x", expand = FALSE, inner.radius = inner_radius) +
     ggplot2::scale_x_continuous(limits = c(0, 1)) +
     ggplot2::scale_y_continuous(limits = c(0, D)) +
-    legend_keys_layer(j$states) +
+    legend_keys_layer(j@states) +
     scale_fill_journey(j) +
     ggplot2::labs(subtitle = sprintf("N = %s patients; rings = steps 1 to %d (inside out)",
                                      format(N, big.mark = ","), D)) +
@@ -66,7 +66,7 @@ plot_icicle <- function(j, steps = NULL, label = c("n_pct", "pct", "n", "state",
   label <- match.arg(label)
   tr <- jn_tree(j, depth = steps)
   tr$text <- tree_label(tr, j, label, label_min)
-  N <- j$meta$n_persons
+  N <- j@n_persons
   D <- max(tr$depth)
   ggplot2::ggplot(tr) +
     ggplot2::geom_rect(
@@ -83,7 +83,7 @@ plot_icicle <- function(j, steps = NULL, label = c("n_pct", "pct", "n", "state",
                                 labels = paste("Step", seq_len(D)),
                                 expand = c(0, 0)) +
     ggplot2::scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-    legend_keys_layer(j$states) +
+    legend_keys_layer(j@states) +
     scale_fill_journey(j) +
     ggplot2::labs(x = NULL, y = NULL,
                   subtitle = sprintf("N = %s patients", format(N, big.mark = ","))) +
@@ -93,7 +93,7 @@ plot_icicle <- function(j, steps = NULL, label = c("n_pct", "pct", "n", "state",
 
 tree_label <- function(tr, j, label, label_min) {
   txt <- if (label == "state") {
-    j$states$label[as.integer(tr$state)]
+    j@states$label[as.integer(tr$state)]
   } else {
     format_count_label(tr$n, tr$pct, label)
   }

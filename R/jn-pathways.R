@@ -25,9 +25,9 @@ tbl_pathways <- function(j, steps = NULL, include_end = FALSE, sep = " -> ",
   m <- jn_state_matrix(j)
   steps <- resolve_steps(steps, ncol(m))
   m <- m[, steps, drop = FALSE]
-  lab <- j$states$label
-  if (!include_end && !is.null(j$meta$end_state)) {
-    m[m == match(j$meta$end_state, j$states$level)] <- NA
+  lab <- j@states$label
+  if (!include_end && !is.null(j@meta$end_state)) {
+    m[m == match(j@meta$end_state, j@states$level)] <- NA
   }
   N <- nrow(m)
   lbl <- matrix(lab[m], nrow = N)

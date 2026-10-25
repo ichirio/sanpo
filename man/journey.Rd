@@ -2,6 +2,7 @@
 % Please edit documentation in R/jn-journey.R
 \name{journey}
 \alias{journey}
+\alias{class_journey}
 \title{Journey object}
 \usage{
 journey(sequence, states = NULL, meta = list())
@@ -17,14 +18,24 @@ unique values.}
 \item{meta}{A named list of parameters to keep with the journey.}
 }
 \value{
-An object of class \code{journey}: a list with \code{sequence}, \code{states}
-and \code{meta}.
+\code{journey()} returns a \code{class_journey} object.
 }
 \description{
-A journey is the one data contract that every plot and table in this package
-reads: the sequence of states per patient, the states dictionary and the
-parameters that made it. It is usually built by \code{\link[=jn_sequence]{jn_sequence()}};
-\code{journey()} validates a sequence built some other way.
+A journey is the one data contract that every plot and table in this
+package reads: the sequence of states per patient, the states dictionary
+and the parameters that made it. It is usually built by
+\code{\link[=jn_sequence]{jn_sequence()}}; \code{journey()} validates a sequence built some other way.
+}
+\details{
+A journey is an S7 object of class \code{class_journey} with the properties
+\code{sequence}, \code{states}, \code{meta} and the read-only \code{n_persons}; read them
+with \code{@} (\code{j@sequence}). The class validator keeps the invariants that
+every plot relies on: the sequence has the required columns, \code{state} is a
+factor whose levels are exactly the dictionary's levels (unused levels =
+empty nodes), and \code{step} runs 1, 2, 3, ... within each patient. Methods
+are provided for \code{print()}, \code{summary()} (patients per step and state),
+\code{as.data.frame()} (the sequence) and \code{plot()} (\code{\link[=plot_sankey]{plot_sankey()}}). Other
+packages can add methods for \code{class_journey} with \code{\link[S7:method]{S7::method()}}.
 }
 \examples{
 seq <- data.frame(
@@ -33,5 +44,8 @@ seq <- data.frame(
   start = as.Date(c("2022-01-01", "2022-03-01", "2022-02-01")),
   end = as.Date(c("2022-02-01", "2022-04-01", "2022-05-01"))
 )
-journey(seq, states = c("A", "B", "C"))
+j <- journey(seq, states = c("A", "B", "C"))
+j
+j@n_persons
+summary(j)
 }

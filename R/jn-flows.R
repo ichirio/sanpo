@@ -19,7 +19,7 @@ jn_flows <- function(j, steps = NULL) {
   check_journey(j)
   m <- jn_state_matrix(j)
   steps <- resolve_steps(steps, ncol(m))
-  lv <- j$states$level
+  lv <- j@states$level
   L <- length(lv)
   if (length(steps) < 2) {
     return(data.frame(step_from = integer(), step_to = integer(),
@@ -47,7 +47,7 @@ jn_flows <- function(j, steps = NULL) {
 jn_nodes <- function(j, steps = NULL) {
   m <- jn_state_matrix(j)
   steps <- resolve_steps(steps, ncol(m))
-  lv <- j$states$level
+  lv <- j@states$level
   L <- length(lv)
   out <- lapply(steps, function(s) {
     data.frame(step = s, state = factor(lv, levels = lv),
@@ -81,7 +81,7 @@ jn_tree <- function(j, depth = NULL) {
     if (is.na(depth) || depth < 1) cli::cli_abort("{.arg depth} must be >= 1.")
     m <- m[, seq_len(min(depth, ncol(m))), drop = FALSE]
   }
-  lv <- j$states$level
+  lv <- j@states$level
   N <- nrow(m)
   out <- vector("list", ncol(m))
   key_prev <- rep("", N)

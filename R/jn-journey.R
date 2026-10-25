@@ -59,7 +59,7 @@ jn_default_colours <- function(levels) {
 }
 
 as_jn_states <- function(x) {
-  if (inherits(x, "journey")) return(x$states)
+  if (S7::S7_inherits(x, class_journey)) return(x@states)
   if (inherits(x, "jn_states")) return(x)
   if (is.data.frame(x) && all(c("level", "label", "colour") %in% names(x))) {
     return(jn_states(x$level, x$label, x$colour))
@@ -68,12 +68,24 @@ as_jn_states <- function(x) {
   cli::cli_abort("Expected a journey, a {.fn jn_states} dictionary or a character vector of levels.")
 }
 
+jn_sequence_cols <- c("patient_id", "step", "state", "start", "end")
+
 #' Journey object
 #'
-#' A journey is the one data contract that every plot and table in this package
-#' reads: the sequence of states per patient, the states dictionary and the
-#' parameters that made it. It is usually built by [jn_sequence()];
-#' `journey()` validates a sequence built some other way.
+#' A journey is the one data contract that every plot and table in this
+#' package reads: the sequence of states per patient, the states dictionary
+#' and the parameters that made it. It is usually built by
+#' [jn_sequence()]; `journey()` validates a sequence built some other way.
+#'
+#' A journey is an S7 object of class `class_journey` with the properties
+#' `sequence`, `states`, `meta` and the read-only `n_persons`; read them
+#' with `@` (`j@sequence`). The class validator keeps the invariants that
+#' every plot relies on: the sequence has the required columns, `state` is a
+#' factor whose levels are exactly the dictionary's levels (unused levels =
+#' empty nodes), and `step` runs 1, 2, 3, ... within each patient. Methods
+#' are provided for `print()`, `summary()` (patients per step and state),
+#' `as.data.frame()` (the sequence) and `plot()` ([plot_sankey()]). Other
+#' packages can add methods for `class_journey` with [S7::method()].
 #'
 #' @param sequence A data frame with columns `patient_id`, `step` (integer,
 #'   from 1 without holes), `state`, `start` and `end`.
@@ -81,8 +93,7 @@ as_jn_states <- function(x) {
 #'   or `NULL` to use the levels of `sequence$state` (factor) or its sorted
 #'   unique values.
 #' @param meta A named list of parameters to keep with the journey.
-#' @return An object of class `journey`: a list with `sequence`, `states`
-#'   and `meta`.
+#' @return `journey()` returns a `class_journey` object.
 #' @examples
 #' seq <- data.frame(
 #'   patient_id = c("P1", "P1", "P2"), step = c(1L, 2L, 1L),
@@ -90,10 +101,13 @@ as_jn_states <- function(x) {
 #'   start = as.Date(c("2022-01-01", "2022-03-01", "2022-02-01")),
 #'   end = as.Date(c("2022-02-01", "2022-04-01", "2022-05-01"))
 #' )
-#' journey(seq, states = c("A", "B", "C"))
+#' j <- journey(seq, states = c("A", "B", "C"))
+#' j
+#' j@n_persons
+#' summary(j)
 #' @export
 journey <- function(sequence, states = NULL, meta = list()) {
-  need <- c("patient_id", "step", "state", "start", "end")
+  need <- jn_sequence_cols
   if (!is.data.frame(sequence) || !all(need %in% names(sequence))) {
     cli::cli_abort("{.arg sequence} must be a data frame with columns {.val {need}}.")
   }
@@ -112,39 +126,96 @@ journey <- function(sequence, states = NULL, meta = list()) {
   sequence$step <- as.integer(sequence$step)
   sequence <- sequence[order(sequence$patient_id, sequence$step), need, drop = FALSE]
   rownames(sequence) <- NULL
-  first <- !duplicated(sequence$patient_id)
-  expect_step <- seq_along(first) - cummax(ifelse(first, seq_along(first), 0L)) + 1L
-  if (any(sequence$step != expect_step)) {
-    cli::cli_abort("{.field step} must run 1, 2, 3, ... within each patient.")
-  }
-  meta$n_persons <- sum(first)
-  structure(list(sequence = sequence, states = states, meta = meta),
-            class = "journey")
+  meta$n_persons <- NULL
+  tryCatch(
+    class_journey(sequence = sequence, states = states, meta = meta),
+    error = function(e) cli::cli_abort(conditionMessage(e), call = NULL)
+  )
 }
 
+#' @rdname journey
+#' @format NULL
+#' @usage NULL
 #' @export
-print.journey <- function(x, ...) {
-  m <- x$meta
-  cat(cli::format_inline("<journey> {m$n_persons} patient{?s}, {nrow(x$sequence)} step row{?s}, {nrow(x$states)} state{?s}"), "\n", sep = "")
-  used <- table(x$sequence$state)
-  lv <- x$states$level
+class_journey <- S7::new_class(
+  "journey",
+  properties = list(
+    sequence = S7::class_data.frame,
+    states = S7::class_data.frame,
+    meta = S7::class_list,
+    n_persons = S7::new_property(
+      S7::class_integer,
+      getter = function(self) length(unique(self@sequence$patient_id))
+    )
+  ),
+  validator = function(self) {
+    st <- self@states
+    sq <- self@sequence
+    if (!all(c("level", "label", "colour") %in% names(st))) {
+      return("@states must have columns level, label and colour (see jn_states()).")
+    }
+    if (anyNA(st$level) || anyDuplicated(st$level)) {
+      return("@states$level must be unique and non-missing.")
+    }
+    miss <- setdiff(jn_sequence_cols, names(sq))
+    if (length(miss) > 0) {
+      return(paste0("@sequence lacks column(s): ", paste(miss, collapse = ", "), "."))
+    }
+    if (!is.factor(sq$state) || !identical(levels(sq$state), st$level)) {
+      return("@sequence$state must be a factor with the levels of @states$level.")
+    }
+    if (anyNA(sq$state)) return("@sequence$state must not be missing.")
+    if (!is.integer(sq$step)) return("@sequence$step must be an integer.")
+    n <- nrow(sq)
+    if (n > 0) {
+      first <- c(TRUE, sq$patient_id[-1] != sq$patient_id[-n])
+      expect <- seq_len(n) - cummax(ifelse(first, seq_len(n), 0L)) + 1L
+      if (any(sq$step != expect) || anyDuplicated(sq$patient_id[first])) {
+        return("@sequence$step must run 1, 2, 3, ... within each patient (rows sorted by patient and step).")
+      }
+    }
+    if (length(self@meta) > 0 && is.null(names(self@meta))) {
+      return("@meta must be a named list.")
+    }
+    NULL
+  }
+)
+
+S7::method(print, class_journey) <- function(x, ...) {
+  m <- x@meta
+  cat(cli::format_inline("<journey> {x@n_persons} patient{?s}, {nrow(x@sequence)} step row{?s}, {nrow(x@states)} state{?s}"), "\n", sep = "")
+  used <- table(x@sequence$state)
+  lv <- x@states$level
   empty <- lv[used[lv] == 0]
   cat(cli::format_inline("States (node order): {.val {lv}}"), "\n", sep = "")
   if (length(empty) > 0) cat(cli::format_inline("Empty states: {.val {empty}}"), "\n", sep = "")
-  shown <- setdiff(names(m), "n_persons")
-  if (length(shown) > 0) {
-    vals <- vapply(m[shown], function(v) {
+  if (length(m) > 0) {
+    vals <- vapply(m, function(v) {
       if (is.null(v)) "NULL" else paste(format(v), collapse = ", ")
     }, character(1))
-    cat(cli::format_inline("Parameters: {paste(shown, vals, sep = ' = ', collapse = '; ')}"), "\n", sep = "")
+    cat(cli::format_inline("Parameters: {paste(names(m), vals, sep = ' = ', collapse = '; ')}"), "\n", sep = "")
   }
   invisible(x)
+}
+
+S7::method(summary, class_journey) <- function(object, ...) {
+  out <- jn_nodes(object)
+  out$pct <- out$n / object@n_persons
+  out
+}
+
+S7::method(as.data.frame, class_journey) <- function(x, ...) { # nolint: object_name_linter.
+  x@sequence
+}
+
+S7::method(plot, class_journey) <- function(x, ...) {
+  plot_sankey(x, ...)
 }
 
 # person x step matrix of integer state codes (NA after a patient's last
 # step). Rows follow the order of unique patient ids.
 jn_state_matrix <- function(j) {
-  s <- j$sequence
+  s <- j@sequence
   pid <- match(s$patient_id, unique(s$patient_id))
   n_steps <- if (nrow(s) == 0) 0L else max(s$step)
   m <- matrix(NA_integer_, nrow = max(c(0L, pid)), ncol = n_steps)
@@ -153,7 +224,7 @@ jn_state_matrix <- function(j) {
 }
 
 check_journey <- function(j, arg = "j") {
-  if (!inherits(j, "journey")) {
+  if (!S7::S7_inherits(j, class_journey)) {
     cli::cli_abort("{.arg {arg}} must be a journey (see {.fn jn_sequence}).")
   }
   invisible(j)

@@ -35,9 +35,10 @@ jn_simulate <- function(n = 1000, unit = c("day", "month"), seed = 1,
   n <- as.integer(n)
   if (!is.null(seed)) {
     genv <- globalenv()
-    old <- if (exists(".Random.seed", envir = genv, inherits = FALSE)) get(".Random.seed", envir = genv) else NULL
+    seed_var <- ".Random.seed"
+    old <- if (exists(seed_var, envir = genv, inherits = FALSE)) get(seed_var, envir = genv) else NULL
     on.exit({
-      if (is.null(old)) rm(".Random.seed", envir = genv) else assign(".Random.seed", old, envir = genv)
+      if (is.null(old)) rm(list = seed_var, envir = genv) else assign(seed_var, old, envir = genv)
     }, add = TRUE)
     set.seed(seed)
   }

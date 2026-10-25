@@ -36,8 +36,8 @@ test_that("jn_states keeps order and fixes colours", {
 
 test_that("jn_sequence merges, collapses, cuts and appends the end state", {
   j <- jn_sequence(ep_small(), states = c("A", "B", "C"))
-  expect_s3_class(j, "journey")
-  s <- j$sequence
+  expect_true(S7::S7_inherits(j, class_journey))
+  s <- j@sequence
   p1 <- s[s$patient_id == "P1", ]
   # A (Jan-Mar, gap 4 days merged), B, A (gap 44 days but a different state), end
   expect_equal(as.character(p1$state), c("A", "B", "A", "(end)"))
@@ -46,25 +46,25 @@ test_that("jn_sequence merges, collapses, cuts and appends the end state", {
   p2 <- s[s$patient_id == "P2", ]
   expect_equal(as.character(p2$state), c("B", "(end)"))
   expect_equal(levels(s$state), c("A", "B", "C", "(end)"))
-  expect_equal(j$meta$n_persons, 3)
+  expect_equal(j@n_persons, 3)
 
   j2 <- jn_sequence(ep_small(), collapse = FALSE, end_state = NULL)
-  expect_equal(as.character(j2$sequence$state[j2$sequence$patient_id == "P2"]), c("B", "B"))
+  expect_equal(as.character(j2@sequence$state[j2@sequence$patient_id == "P2"]), c("B", "B"))
 
   j3 <- jn_sequence(ep_small(), gap_state = "(gap)")
-  expect_equal(as.character(j3$sequence$state[j3$sequence$patient_id == "P2"]),
+  expect_equal(as.character(j3@sequence$state[j3@sequence$patient_id == "P2"]),
                c("B", "(gap)", "B", "(end)"))
 
   j4 <- jn_sequence(ep_small(), max_steps = 2)
-  expect_true(max(j4$sequence$step) <= 2)
-  expect_equal(as.character(j4$sequence$state[j4$sequence$patient_id == "P1"]), c("A", "B"))
+  expect_true(max(j4@sequence$step) <= 2)
+  expect_equal(as.character(j4@sequence$state[j4@sequence$patient_id == "P1"]), c("A", "B"))
 })
 
 test_that("jn_sequence works on month data and validates input", {
   em <- jn_simulate(40, unit = "month")
   j <- jn_sequence(em, unit = "month")
-  expect_equal(j$meta$grace, 1)
-  expect_true(all(format(j$sequence$start, "%d") == "01"))
+  expect_equal(j@meta$grace, 1)
+  expect_true(all(format(j@sequence$start, "%d") == "01"))
   expect_error(jn_sequence(ep_small(), states = c("A")), "not in")
   expect_error(jn_sequence(ep_small(), id = "nope"), "not found")
   expect_output(print(j), "journey")
@@ -74,9 +74,22 @@ test_that("journey() validates a hand-made sequence", {
   sq <- data.frame(patient_id = c("1", "1", "2"), step = c(1, 2, 1),
                    state = c("A", "B", "A"), start = Sys.Date(), end = Sys.Date())
   j <- journey(sq, states = c("A", "B", "C"))
-  expect_equal(levels(j$sequence$state), c("A", "B", "C"))
+  expect_equal(levels(j@sequence$state), c("A", "B", "C"))
   sq$step[2] <- 3
   expect_error(journey(sq), "step")
+})
+
+test_that("the S7 validator guards the invariants and methods work", {
+  j <- jn_sequence(ep_small(), states = c("A", "B", "C"))
+  expect_equal(j@n_persons, 3L)
+  bad <- j@sequence
+  bad$state <- factor(as.character(bad$state))
+  expect_error(j@sequence <- bad, "levels")
+  expect_error(j@states <- data.frame(x = 1), "columns")
+  expect_equal(as.data.frame(j), j@sequence)
+  sm <- summary(j)
+  expect_equal(sum(sm$n[sm$step == 1]), 3)
+  expect_s3_class(plot(j), "ggplot")
 })
 
 test_that("jn_flows lists every pair, zeros included", {

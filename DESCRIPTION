@@ -1,6 +1,6 @@
 Package: sanpo
 Title: Patient Journeys from Claims and Medical Databases
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: 
     person(given  = "Yoichi",
            family = "Masui",
@@ -25,10 +25,10 @@ Imports:
     ggplot2 (>= 3.5.0),
     grDevices,
     rlang,
+    S7,
     stats,
     utils
 Suggests:
-    patchwork,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1
