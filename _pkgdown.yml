@@ -3,6 +3,21 @@ template:
   bootstrap: 5
 
 reference:
+  - title: Journeys
+    contents:
+      - jn_simulate
+      - jn_sequence
+      - journey
+      - jn_states
+      - jn_flows
+      - jn_tree
+  - title: Journey plots and tables
+    contents:
+      - plot_sankey
+      - plot_tree
+      - scale_fill_journey
+      - theme_journey
+      - tbl_pathways
   - title: Treatment pathways
     contents:
       - sp_sankey

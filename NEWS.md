@@ -1,5 +1,11 @@
 # sanpo (development version)
 
+* First minimal journey API (package name provisional; see `DECISIONS.md`):
+  `jn_simulate()` (synthetic claims-like episodes), `jn_sequence()`
+  (episodes -> journey), `journey()`, `jn_states()`, `jn_flows()`,
+  `jn_tree()`, `plot_sankey()`, `plot_sunburst()`, `plot_icicle()`,
+  `scale_fill_journey()`, `theme_journey()` and `tbl_pathways()`.
+
 ## sanpo 0.0.0.9000
 
 * Package skeleton (DESCRIPTION, testthat 3, lintr, R-CMD-check workflow,
