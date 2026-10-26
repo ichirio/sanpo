@@ -9,7 +9,7 @@ Choices made for the first minimal version (branch `feat/mvp-journey`,
 | # | Topic | Choice now | Alternatives |
 |---|---|---|---|
 | 1 | ggplot2 version | `ggplot2 (>= 3.5.0)`; the sunburst uses `coord_radial()` with only the arguments that exist in 3.5 (`theta`, `expand`, `inner.radius`) | `coord_polar()` fallback |
-| 2 | Lazy tables (dbplyr) | MVP is data.frame only, base R, no dplyr | memo's recommendation: accept lazy tables from the start, DuckDB in CI (planned for 0.2) |
+| 2 | Lazy tables (dbplyr) | **one code path** (2026-10-26): every data verb accepts a data frame or a `dbplyr` lazy table and is written only with `dplyr` verbs that `dbplyr` translates; `engine = c("auto", "db", "memory")`; see "Memory or database" below | data.frame only (MVP) |
 | 3 | Defaults with parameters recorded | `grace` defaults to 30 days / 1 month, `max_steps = 4`, `end_state = "(end)"`, `collapse = TRUE`; all stored in `meta` and printed by `print(j)` | required arguments |
 | 4 | Suppression | `tbl_pathways(min_cell =)` only, primary suppression per row, default none; no secondary suppression; not yet in plots | `jn_suppress()` hook shared by tables and plots (memo, later) |
 | 5 | Synthetic codes | `jn_simulate()` codes are fictional `"6299"` + 5 digits (claims-code shape, no meaning); classes `"Drug A"`..`"Drug E"`, Drug E never used (empty node demo) | fully dummy codes |
@@ -41,6 +41,21 @@ Note: the S7 class is created without a `package =` argument, so the class
 name is `journey`, not `<pkg>::journey`; this keeps a later package rename
 cheap.
 
+## Memory or database (one code path)
+
+| # | Topic | Choice now | Alternatives |
+|---|---|---|---|
+| 17 | Shared path | `jn_sequence()`, `jn_flows()`, `jn_tree()`, `tbl_pathways()` (and the plots, through the same internal workers) run one `dplyr` pipeline on a data frame or a lazy table: window functions (`lag()`, `lead()`, `row_number()`, `cumsum()`, `cummax()`), `filter()`, `count()`, `left_join()`, `union_all()`. Only small aggregates (node, flow and pathway counts) are reshaped in R after `collect()`, with the same R code for both engines. Two lines differ by engine, and neither changes the result: the window order (`dbplyr::window_order()` / `arrange()`) and the window partition (per patient in a database, so it runs in parallel; none in memory, one vectorised pass) | separate base-R and SQL implementations |
+| 17a | Windows, not grouped summaries | Episodes and collapsed steps are "blocks" of consecutive rows (`cumsum()` of a start flag). The largest `t1` of a block is `cummax(block * K + t1) - block * K` with `K = 2^22`; first-row values are carried the same way; the block's last row is kept with `lead()`. This gives exactly what `group_by() + summarise()` gives, but grouped `summarise()` / `lag()` in dplyr run once per group (100k patients: 27.5 s instead of 1.1 s), and self-joins repeat the whole query in SQL. Exact up to 2^31 blocks per partition (per patient in a database) | `group_by() + summarise()` (slow in memory) |
+| 17b | Temporary tables | in a database the pipeline is materialised (`compute()`) at three points (after episodes, after gaps, before the end state) when the database allows it; otherwise the query stays lazy (correct, slower) | one long query |
+| 18 | `dplyr` in `Imports` | **added** (`dplyr (>= 1.1.0)`): the shared path is written in `dplyr` verbs, so it is needed for data frames too. `dbplyr`, `duckdb` and `DBI` are in `Suggests` (needed only for lazy tables / tests) | keep base R for memory (two code paths) |
+| 19 | Dates in the shared path | days: `as.integer(start - as.Date("1970-01-01"))` and back with `as.Date("1970-01-01") + t`; months: `year()`, `month()`, `make_date()` -- DuckDB / SQL function names, defined internally in R with the same meaning so that one expression runs in both | per-backend SQL |
+| 20 | Ties | rows of a patient are ordered by `start`, then `end`, then `state` (was: input row order), so that ties give the same sequence in memory and in a database | input order (not defined in SQL) |
+| 21 | `engine = "auto"` | lazy table: count rows in the database, estimate bytes = rows x (4 per logical / integer / factor, 8 per numeric / Date / date-time, 64 per character column); `<=` limit -> collect and run in memory; `>` limit -> stay in the database. After `jn_sequence()` has built the sequence in the database, the sequence is materialised (`compute()`, a temporary table, when the database allows it) and collected when it fits under the limit, so later steps run in memory. A data frame always runs in memory; `engine = "db"` with a data frame is an error | sample-based size estimate; `object.size()` after a trial collect |
+| 22 | Memory limit | argument `memory_limit` on every verb, default from `options(sanpo.memory_limit = "2GB")`; strings `"500MB"`, `"2GB"` (1024 based) or bytes. The option name is built from the package name at run time, so a rename does not touch the code. Collecting above the limit is refused (`engine = "memory"`, `jn_collect()`) with a message that says to aggregate in the database or raise the limit | environment variable |
+| 23 | Engine message | every verb and plot sends one message (class `jn_engine_message`): engine chosen, data frame / lazy table, rows, size estimate, limit; `options(sanpo.engine_messages = FALSE)` silences it | quiet by default |
+| 24 | Lazy journeys | `class_journey@sequence` may be a lazy table (`state` character there; the validator checks the columns only, `jn_sequence()` guarantees the rest by construction); `print()`, `summary()`, `@n_persons`, the verbs and the plots aggregate it in the database; `jn_collect()` brings it into memory | always collect the sequence |
+
 ## Timings (R 4.6.1, Windows, this PC)
 
 100,000 simulated patients (580,707 prescription rows):
@@ -57,13 +72,77 @@ cheap.
 The aggregated-flow design is fast enough at this size; no need for an
 alternative yet.
 
+## Journey family (PR 2, 2026-10-26)
+
+| # | Topic | Choice now | Alternatives |
+|---|---|---|---|
+| 25 | `jn_lines()` rules | index date = first `start` (or a column `index`); a drug is continuous while its gaps are <= `grace` = **60 days** (2 months); drug episodes starting within `window` = **28 days** (0 months) of the previous start (chained) start one line; regimen = drugs starting in the line + earlier drugs still taken `window` after the line's last start (add-on); a drug stopping within `window` of a new start is a switch; consecutive lines with the same regimen are one line (a restart after a gap is not a new line); `max_steps = 4` lines then `"(end)"` | 90-day gap; restart = new line; anchored (not chained) window; drop-off as a new line |
+| 26 | Regimen states | names = drugs in `drugs` order joined by `" + "`; default dictionary = every single drug (unused = empty node) then the combinations seen, by number of drugs; inside the computation a regimen is a sum of one bit per drug (at most 30 drugs) and named with `case_when()` | string aggregation (not portable in SQL) |
+| 27 | `jn_matrix()` / `plot_transition()` | pooled over step pairs by default (`by_step = TRUE` for one per pair); `pct` = row share; end state not a row; all levels kept; tile fill = row % (grey to blue), state colours as square keys (`scale_colour_journey()`, new) | fill by state colour |
+| 28 | `jn_grid()` / `plot_lasagna()` | time since the patient's first step in the journey's unit; patients sorted by pathway (dictionary order, then id) in the database or in memory; down-sampling = every k-th patient in that order, `k = ceiling(N / n_max)`, `n_max = 2000` (deterministic, keeps pathway proportions, same in both engines); drawn as one rectangle per step (no per-day cells); end state drawn to the horizon (`show_end`) | random sample; per-day cells |
+| 29 | `jn_attrition()` | criteria are `filter()` conditions on rows, applied in order; a patient remains while one of their rows passes all criteria so far; counts of distinct ids only are collected | patient-level table only |
+| 30 | Suppression hook | `jn_suppress()` used by every table: counts 1 to `min_cell - 1` -> `NA`, label `"<min_cell"`, shares `NA`, `suppressed` flag; **zeros are kept** (empty nodes); options `sanpo.min_cell` (project default) and `sanpo.suppress` (a function replacing the rule); not applied to plots yet | suppress zeros too; secondary suppression |
+| 31 | Demo images | no image files in the package; the code for every figure is in `vignette("journey-family")` and the figures are described in the pull request | `inst/demo-images` (not wanted) |
+
+## Timings: memory or database (2026-10-26)
+
+Linux container, 4 cores, 15 GB RAM, R 4.3.3, dplyr 1.1.4, dbplyr 2.5,
+duckdb (CRAN, built from source), in-memory DuckDB with default settings.
+Seconds elapsed; peak memory is the peak RSS of the whole R process
+(`/usr/bin/time`), DuckDB included.
+
+100,000 simulated patients (580,707 rows):
+
+| Step | Memory | DuckDB (`engine = "db"`) |
+|---|---|---|
+| `jn_sequence()` | 1.09 | 3.42 |
+| `jn_flows()` | 0.15 | 0.35 |
+| `jn_tree()` | 0.13 | 0.40 |
+| `tbl_pathways(min_cell = 10)` | 0.14 | 0.41 |
+| `plot_sankey()` + grob | 0.71 | 0.78 |
+| `plot_sunburst()` + grob | 0.49 | 0.86 |
+| `jn_sequence()` with `engine = "auto"` on the lazy table (under the limit: collect, then memory) | -- | 1.77 |
+| peak RSS of the run | 0.30 GB | 0.46 GB |
+
+About 10 million rows (9,988,588 rows, 1,720,000 patients; two
+`jn_simulate(860000)` sets in an on-disk DuckDB file):
+
+| Run | Seconds | Peak RSS |
+|---|---|---|
+| `jn_sequence(engine = "db")`; sequence stays in the database | 18.97 | 1.48 GB (whole run) |
+| then `jn_flows()` / `jn_tree()` / `tbl_pathways()` (`engine = "db"`) | 1.09 / 0.96 / 0.86 | |
+| then `plot_sankey()` / `plot_sunburst()` + grob (aggregated in DuckDB) | 1.58 / 1.35 | |
+| `jn_sequence()` with `engine = "auto"` (estimate 1.3 GB < 2 GB: collected, then memory) | 18.80 | 2.58 GB |
+
+Notes: the first DuckDB version (grouped windows and summaries) took
+1.7 s at 100k but 27.5 s in memory; un-partitioned windows in DuckDB
+pushed the 10M-row peak to 10.7 GB. The partitioned / vectorised split
+(choice 17) fixed both. Peak memory in memory is about twice the size
+estimate (2.58 GB for a 1.3 GB estimate), which is why the default limit
+(2 GB) is well below the RAM of a typical PC.
+
 ## Open (needs a decision from the user)
 
 1. **Package name**: provisional (see choice 8); to be chosen after the
    concept is settled.
-2. **dbplyr timing** (choice 2): MVP is data.frame only; the memo
-   recommends lazy tables from the start. Planned for 0.2 unless decided
-   otherwise.
+2. **`dplyr` in `Imports`** (choice 18): added because the one code path
+   for memory and database is written in `dplyr` verbs (requested for this
+   change); AGENTS.md asks for maintainer agreement on new imports --
+   please confirm.
+3. **Size estimate** (choice 21): bytes per character value (64) is a
+   rough, conservative guess; peak memory during the in-memory pipeline is
+   a few times the estimate (see the timings). Should the limit compare
+   the estimate times a safety factor?
+4. **Temporary tables** (choice 21): a sequence that stays in the database
+   is materialised with `compute()` when allowed. On a read-only production
+   database this falls back to a lazy query (slower: each verb re-runs the
+   pipeline). Is a writable scratch schema available on the target
+   databases?
+5. **Lines of therapy defaults** (choice 25): 28-day window, 60-day gap,
+   restart of the same regimen = same line. Please confirm or give the
+   rules of the target studies.
+6. **Zero cells** (choice 30): zeros are shown, not suppressed. Some data
+   providers' rules may differ.
 
 ## Done
 

@@ -36,6 +36,12 @@ empty nodes), and \code{step} runs 1, 2, 3, ... within each patient. Methods
 are provided for \code{print()}, \code{summary()} (patients per step and state),
 \code{as.data.frame()} (the sequence) and \code{plot()} (\code{\link[=plot_sankey]{plot_sankey()}}). Other
 packages can add methods for \code{class_journey} with \code{\link[S7:method]{S7::method()}}.
+
+The sequence is usually a data frame. When \code{\link[=jn_sequence]{jn_sequence()}} runs in a
+database and the sequence is above the memory limit (see \link{engine}), it
+stays a lazy table (\code{state} then is character; the dictionary still
+gives the levels), the data verbs aggregate it in the database, and
+\code{\link[=jn_collect]{jn_collect()}} brings it into memory.
 }
 \examples{
 seq <- data.frame(

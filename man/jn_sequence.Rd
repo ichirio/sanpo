@@ -16,11 +16,13 @@ jn_sequence(
   collapse = TRUE,
   max_steps = 4,
   end_state = "(end)",
-  states = NULL
+  states = NULL,
+  engine = c("auto", "db", "memory"),
+  memory_limit = NULL
 )
 }
 \arguments{
-\item{data}{A data frame of episodes.}
+\item{data}{A data frame or a lazy table of episodes.}
 
 \item{id, start, end, state}{Column names (strings) in \code{data}. \code{end} may be
 \code{NA} (a single day or month). \code{start} and \code{end} are \code{Date}s.}
@@ -43,9 +45,15 @@ or \code{NULL} for none.}
 
 \item{states}{A \code{\link[=jn_states]{jn_states()}} dictionary or a character vector of levels
 (the node order). \code{NULL} uses the levels of \code{data[[state]]} when it is
-a factor, otherwise its sorted unique values. Levels no row uses are
-kept as empty nodes. \code{gap_state} and \code{end_state} are appended when
-missing.}
+a factor, otherwise its sorted unique values (a database has no
+factors, so pass \code{states} to keep the order and the empty nodes).
+Levels no row uses are kept as empty nodes. \code{gap_state} and
+\code{end_state} are appended when missing.}
+
+\item{engine}{\code{"auto"}, \code{"db"} or \code{"memory"}; see \link{engine}.}
+
+\item{memory_limit}{Largest size collected into memory; defaults to the
+option \code{sanpo.memory_limit} (\code{"2GB"}). See \link{engine}.}
 }
 \value{
 A \code{\link[=journey]{journey()}}.
@@ -55,7 +63,8 @@ Turn episode rows (one row per prescription, claim or exposure period)
 into the sequence of states per patient.
 }
 \details{
-The rules, applied per patient in order of \code{start}:
+The rules, applied per patient in order of \code{start} (then \code{end}, then
+\code{state}, so that ties give the same order in memory and in a database):
 \enumerate{
 \item Rows of the same state whose gap is at most \code{grace} belong to one
 episode. The gap is measured from the latest \code{end} seen so far; a row
@@ -70,6 +79,14 @@ its own rather than a missing value.
 }
 
 Every parameter is stored in \code{meta} and printed with the journey.
+
+\code{data} may be a data frame or a lazy database table (\code{dbplyr}); the same
+\code{dplyr} code runs on both and gives the same journey. See \link{engine} for
+\code{engine} and \code{memory_limit}: with \code{"auto"}, a lazy table under the limit
+is collected first; over it the sequence is built in the database and
+collected when it fits under the limit (otherwise the journey keeps a
+lazy sequence, materialised as a temporary table when the database
+allows it).
 }
 \examples{
 ep <- jn_simulate(200)

@@ -22,6 +22,7 @@ Depends:
     R (>= 4.1)
 Imports:
     cli,
+    dplyr (>= 1.1.0),
     ggplot2 (>= 3.5.0),
     grDevices,
     rlang,
@@ -29,6 +30,13 @@ Imports:
     stats,
     utils
 Suggests:
-    testthat (>= 3.0.0)
+    DBI,
+    dbplyr (>= 2.4.0),
+    duckdb,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1

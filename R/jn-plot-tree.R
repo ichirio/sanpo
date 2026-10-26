@@ -31,9 +31,9 @@ plot_sunburst <- function(j, steps = NULL, label = c("pct", "n", "n_pct", "state
                           legend = TRUE) {
   check_journey(j)
   label <- match.arg(label)
-  tr <- jn_tree(j, depth = steps)
+  tr <- tree_data(j, steps, "plot_sunburst")
   tr$text <- tree_label(tr, j, label, label_min)
-  N <- j@n_persons
+  N <- sum(tr$n[tr$depth == 1])
   D <- max(tr$depth)
   ggplot2::ggplot(tr) +
     ggplot2::geom_rect(
@@ -64,9 +64,9 @@ plot_icicle <- function(j, steps = NULL, label = c("n_pct", "pct", "n", "state",
                         label_min = 0.03, label_size = 3, legend = TRUE) {
   check_journey(j)
   label <- match.arg(label)
-  tr <- jn_tree(j, depth = steps)
+  tr <- tree_data(j, steps, "plot_icicle")
   tr$text <- tree_label(tr, j, label, label_min)
-  N <- j@n_persons
+  N <- sum(tr$n[tr$depth == 1])
   D <- max(tr$depth)
   ggplot2::ggplot(tr) +
     ggplot2::geom_rect(
@@ -99,4 +99,10 @@ tree_label <- function(tr, j, label, label_min) {
   }
   txt[tr$pct < label_min] <- ""
   txt
+}
+
+tree_data <- function(j, steps, fn) {
+  depth <- if (is.null(steps)) NULL else as.integer(max(steps))
+  if (!is.null(depth) && (is.na(depth) || depth < 1)) cli::cli_abort("{.arg steps} must be >= 1.")
+  tree_from(journey_data(j, "auto", NULL, fn), j@states$level, depth)
 }

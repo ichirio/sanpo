@@ -50,6 +50,9 @@ Node order and colours come from the states dictionary, so they match
 \code{\link[=plot_sunburst]{plot_sunburst()}} and \code{\link[=plot_icicle]{plot_icicle()}}. With \code{empty = "show"}, a state no
 patient is in at a step is still drawn as a thin node labelled \code{0}
 (the end and gap states are not drawn empty).
+
+A journey whose sequence is in a database is aggregated there (see
+\link{engine}); only the node and flow counts are collected.
 }
 \examples{
 j <- jn_sequence(jn_simulate(500), max_steps = 3)
