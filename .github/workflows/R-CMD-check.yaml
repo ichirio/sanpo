@@ -53,6 +53,8 @@ jobs:
         with:
           extra-packages: |
             any::rcmdcheck
+            any::dbplyr
+            any::duckdb
             ${{ matrix.config.gg || 'any::ggplot2' }}
           needs: check
 

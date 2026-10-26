@@ -4,12 +4,21 @@
 \alias{jn_tree}
 \title{Prefix tree of pathways}
 \usage{
-jn_tree(j, depth = NULL)
+jn_tree(
+  j,
+  depth = NULL,
+  engine = c("auto", "db", "memory"),
+  memory_limit = NULL
+)
 }
 \arguments{
 \item{j}{A \code{\link[=journey]{journey()}}.}
 
 \item{depth}{Maximum depth (number of steps); \code{NULL} = all.}
+
+\item{engine}{\code{"auto"}, \code{"db"} or \code{"memory"}; see \link{engine}.}
+
+\item{memory_limit}{Largest size collected into memory; see \link{engine}.}
 }
 \value{
 A data frame with columns \code{id} (the prefix, states joined by
@@ -22,6 +31,10 @@ Count the patients sharing each pathway prefix (\code{A}, \code{A/B}, \code{A/B/
 each node also carries its position as a fraction of all patients
 (\code{start}, \code{end}), with children ordered by the states dictionary inside
 their parent.
+}
+\details{
+The pathway counts are made in memory or in the database with the same
+\code{dplyr} code (see \link{engine}); the tree is built from those counts.
 }
 \examples{
 j <- jn_sequence(jn_simulate(200), max_steps = 3)

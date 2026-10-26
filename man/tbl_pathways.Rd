@@ -9,7 +9,9 @@ tbl_pathways(
   steps = NULL,
   include_end = FALSE,
   sep = " -> ",
-  min_cell = NULL
+  min_cell = NULL,
+  engine = c("auto", "db", "memory"),
+  memory_limit = NULL
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ tbl_pathways(
 below it are suppressed (\code{n} and \code{pct} set to \code{NA}, \code{n_label} shows
 \code{"<min_cell"}). Rows are suppressed one by one; no secondary
 suppression is done.}
+
+\item{engine}{\code{"auto"}, \code{"db"} or \code{"memory"}; see \link{engine}.}
+
+\item{memory_limit}{Largest size collected into memory; see \link{engine}.}
 }
 \value{
 A data frame with columns \code{pathway}, \code{n_steps}, \code{n}, \code{pct}
@@ -33,7 +39,8 @@ A data frame with columns \code{pathway}, \code{n_steps}, \code{n}, \code{pct}
 }
 \description{
 Count the patients per pathway (the states of their steps joined in
-order), largest first.
+order), largest first. The counts are made in memory or in the database
+with the same \code{dplyr} code (see \link{engine}).
 }
 \examples{
 j <- jn_sequence(jn_simulate(300), max_steps = 3)
