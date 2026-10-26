@@ -72,6 +72,18 @@ cheap.
 The aggregated-flow design is fast enough at this size; no need for an
 alternative yet.
 
+## Journey family (PR 2, 2026-10-26)
+
+| # | Topic | Choice now | Alternatives |
+|---|---|---|---|
+| 25 | `jn_lines()` rules | index date = first `start` (or a column `index`); a drug is continuous while its gaps are <= `grace` = **60 days** (2 months); drug episodes starting within `window` = **28 days** (0 months) of the previous start (chained) start one line; regimen = drugs starting in the line + earlier drugs still taken `window` after the line's last start (add-on); a drug stopping within `window` of a new start is a switch; consecutive lines with the same regimen are one line (a restart after a gap is not a new line); `max_steps = 4` lines then `"(end)"` | 90-day gap; restart = new line; anchored (not chained) window; drop-off as a new line |
+| 26 | Regimen states | names = drugs in `drugs` order joined by `" + "`; default dictionary = every single drug (unused = empty node) then the combinations seen, by number of drugs; inside the computation a regimen is a sum of one bit per drug (at most 30 drugs) and named with `case_when()` | string aggregation (not portable in SQL) |
+| 27 | `jn_matrix()` / `plot_transition()` | pooled over step pairs by default (`by_step = TRUE` for one per pair); `pct` = row share; end state not a row; all levels kept; tile fill = row % (grey to blue), state colours as square keys (`scale_colour_journey()`, new) | fill by state colour |
+| 28 | `jn_grid()` / `plot_lasagna()` | time since the patient's first step in the journey's unit; patients sorted by pathway (dictionary order, then id) in the database or in memory; down-sampling = every k-th patient in that order, `k = ceiling(N / n_max)`, `n_max = 2000` (deterministic, keeps pathway proportions, same in both engines); drawn as one rectangle per step (no per-day cells); end state drawn to the horizon (`show_end`) | random sample; per-day cells |
+| 29 | `jn_attrition()` | criteria are `filter()` conditions on rows, applied in order; a patient remains while one of their rows passes all criteria so far; counts of distinct ids only are collected | patient-level table only |
+| 30 | Suppression hook | `jn_suppress()` used by every table: counts 1 to `min_cell - 1` -> `NA`, label `"<min_cell"`, shares `NA`, `suppressed` flag; **zeros are kept** (empty nodes); options `sanpo.min_cell` (project default) and `sanpo.suppress` (a function replacing the rule); not applied to plots yet | suppress zeros too; secondary suppression |
+| 31 | Demo images | no image files in the package; the code for every figure is in `vignette("journey-family")` and the figures are described in the pull request | `inst/demo-images` (not wanted) |
+
 ## Timings: memory or database (2026-10-26)
 
 Linux container, 4 cores, 15 GB RAM, R 4.3.3, dplyr 1.1.4, dbplyr 2.5,
@@ -126,6 +138,11 @@ estimate (2.58 GB for a 1.3 GB estimate), which is why the default limit
    database this falls back to a lazy query (slower: each verb re-runs the
    pipeline). Is a writable scratch schema available on the target
    databases?
+5. **Lines of therapy defaults** (choice 25): 28-day window, 60-day gap,
+   restart of the same regimen = same line. Please confirm or give the
+   rules of the target studies.
+6. **Zero cells** (choice 30): zeros are shown, not suppressed. Some data
+   providers' rules may differ.
 
 ## Done
 

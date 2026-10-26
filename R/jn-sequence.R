@@ -197,7 +197,7 @@ steps_from_index <- function(x, unit, grace, gap_state, collapse, max_steps,
   x <- dplyr::mutate(x, new_run = dplyr::if_else(
     new_p == 0L & state == prev_state & t0 - prev_end - 1L <= !!grace, 0L, 1L
   ))
-  runs <- collapse_blocks(x, "new_run", first = "t0")
+  runs <- collapse_blocks(x, "new_run")
   runs <- checkpoint(dplyr::mutate(runs, ord = as.integer(block * 2L)))
 
   # 2. gaps between episodes ------------------------------------------------
@@ -222,7 +222,7 @@ steps_from_index <- function(x, unit, grace, gap_state, collapse, max_steps,
     runs <- mark_blocks(runs, "patient_id", "new_p", "p")
     runs <- dplyr::mutate(runs, prev_state = dplyr::lag(state))
     runs <- dplyr::mutate(runs, new = dplyr::if_else(new_p == 0L & state == prev_state, 0L, 1L))
-    runs <- collapse_blocks(runs, "new", first = c("t0", "ord"))
+    runs <- collapse_blocks(runs, "new", first = c(t0 = "t0", ord = "ord"))
   }
 
   # 4. steps, max_steps, end state ------------------------------------------
@@ -251,14 +251,19 @@ steps_from_index <- function(x, unit, grace, gap_state, collapse, max_steps,
 
 # Window helpers on rows in a fixed window order (see win_part()) -----------
 
-# `flag` = 1 on the first row of each block of equal `col` values, `id` =
-# block number (1, 2, ...).
+# `flag` = 1 on the first row of each block of equal `col` values (one or
+# more columns), `id` = block number (1, 2, ...).
 mark_blocks <- function(x, col, flag, id) {
-  col <- rlang::sym(col)
-  x <- dplyr::mutate(x, .prev = dplyr::lag(!!col))
-  x <- dplyr::mutate(x, !!flag := dplyr::if_else(!is.na(.prev) & .prev == !!col, 0L, 1L))
+  prev <- paste0(".prev_", seq_along(col))
+  for (i in seq_along(col)) {
+    x <- dplyr::mutate(x, !!prev[i] := dplyr::lag(!!rlang::sym(col[i])))
+  }
+  same <- Reduce(function(a, b) rlang::expr(!!a & !!b), Map(function(p, cl) {
+    rlang::expr(!is.na(!!rlang::sym(p)) & !!rlang::sym(p) == !!rlang::sym(cl))
+  }, prev, col))
+  x <- dplyr::mutate(x, !!flag := dplyr::if_else(!!same, 0L, 1L))
   x <- dplyr::mutate(x, !!id := cumsum(!!rlang::sym(flag)))
-  dplyr::select(x, -".prev")
+  dplyr::select(x, -dplyr::all_of(prev))
 }
 
 # Running maximum of `col` within blocks numbered by `block` (non-decreasing
@@ -274,27 +279,31 @@ block_cummax <- function(x, name, col, block) {
 }
 
 # Rows -> one row per block (a block starts where `flag` is 1), kept at the
-# block's last row: `t1` = the largest t1 of the block, the columns `first`
-# (numbers) carried from the block's first row, `block` = the block number
-# (per partition). Columns constant within a block (patient_id, state) are
-# kept as they are. Same result as group_by() + summarise(), with windows
-# only (no self-join, which would repeat the whole query in SQL).
-collapse_blocks <- function(x, flag, first) {
+# block's last row: `keep` (constant within a block, such as patient_id and
+# state), `block` = the block number (per partition), the values of `first`
+# from the block's first row and the largest values of `max` (both named
+# vectors: output name = input column; integer columns). Same result as
+# group_by() + summarise(), with windows only (no self-join, which would
+# repeat the whole query in SQL).
+collapse_blocks <- function(x, flag, first = c(t0 = "t0"), max = c(t1 = "t1"),
+                            keep = c("patient_id", "state")) {
   f <- rlang::sym(flag)
   x <- dplyr::mutate(x, block = cumsum(!!f))
-  x <- block_cummax(x, "t1_block", "t1", "block")
-  # new columns only: the window order may use the columns in `first`
-  tmp <- paste0(".first_", first)
+  # new columns only: the window order may use the input columns
+  tmp_max <- paste0(".max_", names(max))
+  for (i in seq_along(max)) x <- block_cummax(x, tmp_max[i], max[[i]], "block")
+  tmp_first <- paste0(".first_", names(first))
   for (i in seq_along(first)) {
-    v <- rlang::sym(first[i])
+    v <- rlang::sym(first[[i]])
     # at first rows block * K + value (> 0 as K > |value|), else 0
     x <- dplyr::mutate(x, .first = dplyr::if_else(!!f == 1L, !!v + block * !!block_k, 0))
-    x <- dplyr::mutate(x, !!tmp[i] := as.integer(cummax(.first) - block * !!block_k))
+    x <- dplyr::mutate(x, !!tmp_first[i] := as.integer(cummax(.first) - block * !!block_k))
   }
   x <- dplyr::mutate(x, .next = dplyr::lead(block))
   x <- dplyr::filter(dplyr::ungroup(x), is.na(.next) | .next != block)
-  x <- dplyr::select(x, "patient_id", "state", "block", dplyr::all_of(tmp), "t1_block")
-  dplyr::rename(x, !!!rlang::set_names(rlang::syms(c(tmp, "t1_block")), c(first, "t1")))
+  x <- dplyr::select(x, dplyr::all_of(keep), "block", dplyr::all_of(c(tmp_first, tmp_max)))
+  dplyr::rename(x, !!!rlang::set_names(rlang::syms(c(tmp_first, tmp_max)),
+                                       c(names(first), names(max))))
 }
 
 # Materialise a lazy query (a temporary table) where it is reused, when the

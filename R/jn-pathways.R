@@ -8,10 +8,11 @@
 #' @param steps Steps to use (`NULL` = all).
 #' @param include_end Keep the end state at the end of each pathway.
 #' @param sep Separator between states.
-#' @param min_cell `NULL` (default, no suppression) or a number: counts
-#'   below it are suppressed (`n` and `pct` set to `NA`, `n_label` shows
-#'   `"<min_cell"`). Rows are suppressed one by one; no secondary
-#'   suppression is done.
+#' @param min_cell `NULL` (default: the option `sanpo.min_cell`, no
+#'   suppression when unset) or a number: counts below it are suppressed
+#'   (`n` and `pct` set to `NA`, `n_label` shows `"<min_cell"`) by the
+#'   suppression hook [jn_suppress()]. Rows are suppressed one by one; no
+#'   secondary suppression is done.
 #' @inheritParams jn_flows
 #' @return A data frame with columns `pathway`, `n_steps`, `n`, `pct`
 #'   (share of all patients) and `n_label`, plus `suppressed` when
@@ -50,15 +51,7 @@ tbl_pathways <- function(j, steps = NULL, include_end = FALSE, sep = " -> ",
   out$pct <- out$n / N
   out <- out[order(-out$n, out$pathway), c("pathway", "n_steps", "n", "pct")]
   out$n_label <- format(out$n, big.mark = ",", trim = TRUE)
-  if (!is.null(min_cell)) {
-    if (!is.numeric(min_cell) || length(min_cell) != 1 || is.na(min_cell) || min_cell < 1) {
-      cli::cli_abort("{.arg min_cell} must be NULL or a single number >= 1.")
-    }
-    out$suppressed <- out$n < min_cell
-    out$n[out$suppressed] <- NA_integer_
-    out$pct[out$suppressed] <- NA_real_
-    out$n_label[out$suppressed] <- paste0("<", min_cell)
-  }
+  out <- apply_suppression(out, min_cell, cols = "n", pct = "pct")
   rownames(out) <- NULL
   attr(out, "n_persons") <- N
   out

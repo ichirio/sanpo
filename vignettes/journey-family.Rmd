@@ -1,0 +1,87 @@
+---
+title: "The journey family"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The journey family}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5)
+```
+
+Every figure and table below reads the same journey data contract, uses
+the same states dictionary (node order, empty nodes, one colour per
+state) and runs the same `dplyr` code on a data frame or a database table.
+All data are synthetic (`jn_simulate()`; fictional codes).
+
+```{r setup}
+library(sanpo)
+ep <- jn_simulate(2000)
+j <- jn_sequence(ep, max_steps = 4)
+```
+
+## Lines of therapy
+
+`jn_lines()` turns prescription rows into lines of therapy: drugs started
+within `window` (28 days) of each other form one regimen, a new line
+starts when a drug is added or switched to, and a drug is continuous while
+its gaps are at most `grace` (60 days). The defaults are provisional
+(see `DECISIONS.md`).
+
+```{r lines}
+lt <- jn_lines(ep, drug = "state", max_steps = 3)
+lt
+head(tbl_pathways(lt), 8)
+plot_sankey(lt)
+```
+
+## Transition matrix
+
+```{r transition}
+head(jn_matrix(j))
+plot_transition(j)
+plot_transition(j, by_step = TRUE, label = "pct")
+```
+
+## Lasagna plot
+
+One strip per patient, sorted by pathway; large cohorts are down-sampled
+to `n_max` patients (every k-th patient in pathway order).
+
+```{r lasagna, fig.height = 6}
+plot_lasagna(j, n_max = 300, horizon = 730)
+```
+
+## Cohort attrition
+
+```{r attrition, fig.height = 5, fig.width = 6}
+at <- jn_attrition(ep,
+  "Started before 2023" = start < as.Date("2023-01-01"),
+  "Drug A to C" = state %in% c("Drug A", "Drug B", "Drug C"),
+  "Supply >= 28 days" = end - start >= 27
+)
+at
+plot_attrition(at)
+```
+
+## Small cells
+
+Every table goes through one suppression hook, `jn_suppress()`. Set a
+project-wide minimum once, for example `options(sanpo.min_cell = 10)`.
+
+```{r suppress}
+head(jn_matrix(j, min_cell = 10))
+```
+
+## The same code in a database
+
+```{r db, eval = requireNamespace("duckdb", quietly = TRUE) && requireNamespace("dbplyr", quietly = TRUE)}
+con <- DBI::dbConnect(duckdb::duckdb())
+ep_db <- dplyr::copy_to(con, ep, "episodes")
+lt_db <- jn_lines(ep_db, drug = "state", max_steps = 3,
+                  drugs = levels(ep$state), engine = "db")
+identical(tbl_pathways(lt_db, engine = "db"), tbl_pathways(lt))
+DBI::dbDisconnect(con, shutdown = TRUE)
+```

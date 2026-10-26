@@ -23,10 +23,11 @@ tbl_pathways(
 
 \item{sep}{Separator between states.}
 
-\item{min_cell}{\code{NULL} (default, no suppression) or a number: counts
-below it are suppressed (\code{n} and \code{pct} set to \code{NA}, \code{n_label} shows
-\code{"<min_cell"}). Rows are suppressed one by one; no secondary
-suppression is done.}
+\item{min_cell}{\code{NULL} (default: the option \code{sanpo.min_cell}, no
+suppression when unset) or a number: counts below it are suppressed
+(\code{n} and \code{pct} set to \code{NA}, \code{n_label} shows \code{"<min_cell"}) by the
+suppression hook \code{\link[=jn_suppress]{jn_suppress()}}. Rows are suppressed one by one; no
+secondary suppression is done.}
 
 \item{engine}{\code{"auto"}, \code{"db"} or \code{"memory"}; see \link{engine}.}
 
