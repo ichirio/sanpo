@@ -10,6 +10,9 @@
 #' patient is in at a step is still drawn as a thin node labelled `0`
 #' (the end and gap states are not drawn empty).
 #'
+#' A journey whose sequence is in a database is aggregated there (see
+#' [engine]); only the node and flow counts are collected.
+#'
 #' @param j A [journey()].
 #' @param steps Steps to show (`NULL` = all).
 #' @param label Count shown after each state name: `"n_pct"`, `"n"`,
@@ -32,14 +35,14 @@ plot_sankey <- function(j, steps = NULL, label = c("n_pct", "n", "pct", "none"),
   check_journey(j)
   label <- match.arg(label)
   empty <- match.arg(empty)
-  m <- jn_state_matrix(j)
-  steps <- resolve_steps(steps, ncol(m))
-  N <- j@n_persons
+  s <- journey_data(j, "auto", NULL, "plot_sankey")
   st <- j@states
   special <- c(j@meta$end_state, j@meta$gap_state)
 
   # nodes --------------------------------------------------------------------
-  nodes <- jn_nodes(j, steps)
+  nodes <- node_counts(s, st$level, steps)
+  steps <- unique(nodes$step)
+  N <- n_persons_of(s)
   nodes$x <- match(nodes$step, steps)
   nodes$h <- nodes$n / N
   show <- nodes$n > 0 | (empty == "show" & !(as.character(nodes$state) %in% special))
@@ -55,7 +58,7 @@ plot_sankey <- function(j, steps = NULL, label = c("n_pct", "n", "pct", "none"),
                        format_count_label(nodes$n, nodes$n / N, label))
 
   # flows --------------------------------------------------------------------
-  fl <- jn_flows(j, steps)
+  fl <- flows_from(s, st$level, steps)
   fl <- fl[fl$n > 0, ]
   ribbons <- NULL
   if (nrow(fl) > 0) {
