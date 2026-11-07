@@ -2,9 +2,12 @@
 % Please edit documentation in R/jn-scale.R
 \name{scale_fill_journey}
 \alias{scale_fill_journey}
+\alias{scale_colour_journey}
 \title{Journey colour scale}
 \usage{
 scale_fill_journey(states, name = "State", ...)
+
+scale_colour_journey(states, name = "State", ...)
 }
 \arguments{
 \item{states}{A \code{\link[=journey]{journey()}}, a \code{\link[=jn_states]{jn_states()}} dictionary or a character
@@ -12,7 +15,8 @@ vector of levels.}
 
 \item{name}{Legend title.}
 
-\item{...}{Passed to \code{\link[ggplot2:scale_fill_manual]{ggplot2::scale_fill_manual()}}.}
+\item{...}{Passed to \code{\link[ggplot2:scale_fill_manual]{ggplot2::scale_fill_manual()}} or
+\code{\link[ggplot2:scale_colour_manual]{ggplot2::scale_colour_manual()}}.}
 }
 \value{
 A ggplot2 scale.
@@ -21,7 +25,9 @@ A ggplot2 scale.
 The fill scale used by every journey plot: one fixed colour per state from
 the states dictionary, all levels kept (\code{drop = FALSE}) so that a state
 has the same colour and legend position in the Sankey, the sunburst and
-the icicle, even when it is empty in one of them.
+the icicle, even when it is empty in one of them. \code{scale_colour_journey()}
+is the same for the colour aesthetic (used for the state keys of
+\code{\link[=plot_transition]{plot_transition()}}).
 }
 \examples{
 j <- jn_sequence(jn_simulate(100))

@@ -11,10 +11,23 @@ reference:
       - jn_states
       - jn_flows
       - jn_tree
+      - jn_lines
+      - jn_matrix
+      - jn_grid
+      - jn_attrition
+  - title: Memory or database
+    contents:
+      - engine
+      - jn_size
+      - jn_collect
   - title: Journey plots and tables
     contents:
       - plot_sankey
       - plot_tree
       - scale_fill_journey
       - theme_journey
+      - plot_transition
+      - plot_lasagna
+      - plot_attrition
       - tbl_pathways
+      - jn_suppress

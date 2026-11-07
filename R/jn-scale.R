@@ -3,12 +3,15 @@
 #' The fill scale used by every journey plot: one fixed colour per state from
 #' the states dictionary, all levels kept (`drop = FALSE`) so that a state
 #' has the same colour and legend position in the Sankey, the sunburst and
-#' the icicle, even when it is empty in one of them.
+#' the icicle, even when it is empty in one of them. `scale_colour_journey()`
+#' is the same for the colour aesthetic (used for the state keys of
+#' [plot_transition()]).
 #'
 #' @param states A [journey()], a [jn_states()] dictionary or a character
 #'   vector of levels.
 #' @param name Legend title.
-#' @param ... Passed to [ggplot2::scale_fill_manual()].
+#' @param ... Passed to [ggplot2::scale_fill_manual()] or
+#'   [ggplot2::scale_colour_manual()].
 #' @return A ggplot2 scale.
 #' @examples
 #' j <- jn_sequence(jn_simulate(100))
@@ -17,6 +20,21 @@
 scale_fill_journey <- function(states, name = "State", ...) {
   st <- as_jn_states(states)
   ggplot2::scale_fill_manual(
+    name = name,
+    values = stats::setNames(st$colour, st$level),
+    limits = st$level,
+    breaks = st$level,
+    labels = st$label,
+    drop = FALSE,
+    ...
+  )
+}
+
+#' @rdname scale_fill_journey
+#' @export
+scale_colour_journey <- function(states, name = "State", ...) {
+  st <- as_jn_states(states)
+  ggplot2::scale_colour_manual(
     name = name,
     values = stats::setNames(st$colour, st$level),
     limits = st$level,
