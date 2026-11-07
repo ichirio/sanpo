@@ -145,11 +145,12 @@ How this is applied (checked 2026-11-07):
 
 | Stage | Functions | Input | Engine |
 |---|---|---|---|
-| Data preparation | `jn_sequence()` | episodes: data frame or lazy table | yes (`engine`, `memory_limit`) |
-| Data preparation | `jn_flows()`, `jn_tree()`, `tbl_pathways()` | a journey whose sequence is a data frame or a lazy table | yes |
+| Data preparation | `jn_sequence()`, `jn_lines()`, `jn_attrition()` | episodes / prescription rows: data frame or lazy table | yes (`engine`, `memory_limit`) |
+| Data preparation | `jn_flows()`, `jn_tree()`, `tbl_pathways()`, `jn_matrix()`, `jn_grid()` | a journey whose sequence is a data frame or a lazy table | yes |
 | Data preparation | `journey()`, `jn_collect()`, `jn_size()` | data frame or lazy table (a journey for the last two) | no argument; `jn_collect()` / `jn_size()` take `memory_limit` |
-| Dictionary / helpers | `jn_states()`, `jn_simulate()`, `scale_fill_journey()`, `theme_journey()` | small objects | not applicable |
-| Plot | `plot_sankey()`, `plot_sunburst()`, `plot_icicle()` | a journey (the plot collects the small aggregate itself) | none |
+| Dictionary / helpers | `jn_states()`, `jn_simulate()`, `jn_suppress()`, `scale_fill_journey()`, `scale_colour_journey()`, `theme_journey()` | small objects or the small tables the verbs return | not applicable |
+| Plot | `plot_sankey()`, `plot_sunburst()`, `plot_icicle()`, `plot_transition()`, `plot_lasagna()` | a journey (the plot collects the small aggregate, or for the lasagna the capped sample of patients, itself) | none |
+| Plot | `plot_attrition()` | the table made by `jn_attrition()` | none |
 
 - Plot functions take a journey, not a lazy table; a lazy table or data
   frame passed to a plot (or to a table verb) gives an error that names

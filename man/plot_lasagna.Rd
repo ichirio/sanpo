@@ -29,6 +29,11 @@ days or months). Large cohorts are down-sampled to \code{n_max} patients by
 \code{\link[=jn_grid]{jn_grid()}}. Colours come from the states dictionary
 (\code{\link[=scale_fill_journey]{scale_fill_journey()}}).
 }
+\details{
+The plot takes a \code{\link[=journey]{journey()}}, not a lazy table (see \link{engine}); if its
+sequence is in a database, only the sampled patients (at most \code{n_max})
+are collected.
+}
 \examples{
 j <- jn_sequence(jn_simulate(500), max_steps = 4)
 plot_lasagna(j, n_max = 200, horizon = 730)

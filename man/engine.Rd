@@ -32,19 +32,23 @@ only.
 \details{
 \strong{Data preparation (the engine applies).} The steps from episode
 records to a per-patient sequence and on to nodes, links and other
-aggregates: \code{\link[=jn_sequence]{jn_sequence()}} (episode data in), and \code{\link[=jn_flows]{jn_flows()}},
-\code{\link[=jn_tree]{jn_tree()}} and \code{\link[=tbl_pathways]{tbl_pathways()}} (a \code{\link[=journey]{journey()}} in). The data, or the
-journey's sequence, may be a data frame or a lazy database table (a
-\code{dbplyr} \code{tbl_lazy}, for example from DuckDB); the same \code{dplyr} code
-runs on either and gives the same result. \code{\link[=journey]{journey()}},
-\code{\link[=jn_collect]{jn_collect()}} and \code{\link[=jn_size]{jn_size()}} accept both as well.
+aggregates: \code{\link[=jn_sequence]{jn_sequence()}}, \code{\link[=jn_lines]{jn_lines()}} and \code{\link[=jn_attrition]{jn_attrition()}} (episode
+data in), and \code{\link[=jn_flows]{jn_flows()}}, \code{\link[=jn_tree]{jn_tree()}}, \code{\link[=tbl_pathways]{tbl_pathways()}}, \code{\link[=jn_matrix]{jn_matrix()}}
+and \code{\link[=jn_grid]{jn_grid()}} (a \code{\link[=journey]{journey()}} in). The data, or the journey's sequence,
+may be a data frame or a lazy database table (a \code{dbplyr} \code{tbl_lazy}, for
+example from DuckDB); the same \code{dplyr} code runs on either and gives the
+same result. \code{\link[=journey]{journey()}}, \code{\link[=jn_collect]{jn_collect()}} and \code{\link[=jn_size]{jn_size()}} accept both as
+well. \code{\link[=jn_suppress]{jn_suppress()}} works on the small tables these return.
 
 \strong{Plots (the engine does not apply).} \verb{plot_*()} draw aggregated data,
 which always fits in memory, so they have no \code{engine} or \code{memory_limit}
-argument and never take a lazy table: pass a \code{\link[=journey]{journey()}}. If its
-sequence is in a database, the plot collects only the small aggregate
-(node counts, flows, pathway counts) through the verbs above. Passing a lazy table (or a data
-frame of episodes) to a plot gives an error that names \code{\link[=jn_sequence]{jn_sequence()}}.
+argument and never take a lazy table: pass a \code{\link[=journey]{journey()}} (or, for
+\code{\link[=plot_attrition]{plot_attrition()}}, the small table made by \code{\link[=jn_attrition]{jn_attrition()}}). If the
+journey's sequence is in a database, the plot collects only the small
+aggregate (node counts, flows, pathway counts, transition counts, or the
+capped sample of patients for \code{\link[=plot_lasagna]{plot_lasagna()}}) through the verbs above.
+Passing a lazy table (or a data frame of episodes) to a plot gives an
+error that names \code{\link[=jn_sequence]{jn_sequence()}}.
 
 The \code{engine} argument says where the data preparation is done:
 \itemize{

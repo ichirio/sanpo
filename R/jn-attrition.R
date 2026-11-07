@@ -71,7 +71,9 @@ format_n <- function(n) ifelse(is.na(n), "", format(n, big.mark = ",", trim = TR
 #'
 #' Draw [jn_attrition()] as a flow chart with `ggplot2`: one box per step
 #' with the patients remaining, arrows down the middle and the patients
-#' excluded at each step in boxes to the right.
+#' excluded at each step in boxes to the right. It draws the small table
+#' that [jn_attrition()] returns (never the data), so it needs no database
+#' handling (see [engine]).
 #'
 #' @param x A [jn_attrition()] result.
 #' @param box_fill,excl_fill Fill of the main and the exclusion boxes.

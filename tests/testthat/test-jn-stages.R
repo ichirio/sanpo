@@ -3,10 +3,14 @@
 # engine arguments. See DECISIONS.md.
 
 prep_verbs <- c("jn_sequence", "jn_flows", "jn_tree", "tbl_pathways",
-                "journey", "jn_collect", "jn_size")
-plot_verbs <- c("plot_sankey", "plot_sunburst", "plot_icicle")
-helpers <- c("jn_states", "jn_simulate", "scale_fill_journey", "theme_journey",
-             "class_journey")
+                "journey", "jn_collect", "jn_size", "jn_lines", "jn_attrition",
+                "jn_matrix", "jn_grid")
+# plots that take a journey; plot_attrition takes the table of jn_attrition()
+plot_verbs <- c("plot_sankey", "plot_sunburst", "plot_icicle", "plot_transition",
+                "plot_lasagna")
+helpers <- c("jn_states", "jn_simulate", "jn_suppress", "scale_fill_journey",
+             "scale_colour_journey", "theme_journey", "class_journey",
+             "plot_attrition")
 
 test_that("every exported function is classified as data prep, plot or helper", {
   exports <- getNamespaceExports(pkg_name())
@@ -17,7 +21,7 @@ test_that("every exported function is classified as data prep, plot or helper", 
 })
 
 test_that("plots have no engine arguments", {
-  for (f in plot_verbs) {
+  for (f in c(plot_verbs, "plot_attrition")) {
     expect_false(any(c("engine", "memory_limit") %in% names(formals(get(f)))), info = f)
   }
 })
@@ -132,4 +136,99 @@ test_that("a lazy table or a data frame is not a plot input: clear message", {
   expect_error(jn_flows(db), "jn_sequence")
   expect_error(jn_tree(db), "jn_sequence")
   expect_error(tbl_pathways(ep), "jn_sequence")
+})
+
+test_that("jn_lines gives the same lines for a data frame and a lazy table", {
+  ep <- jn_simulate(250)
+  db <- duck_tbl(ep)
+  ref <- quiet(jn_lines(ep, drug = "state", drugs = lv5))
+  for (eng in c("auto", "memory", "db")) {
+    jd <- quiet(jn_lines(db, drug = "state", drugs = lv5, engine = eng))
+    expect_equal(quiet(jn_collect(jd))@sequence, ref@sequence, info = eng)
+    expect_identical(jd@states, ref@states, info = eng)
+    expect_identical(jd@meta, ref@meta, info = eng)
+  }
+  # drugs not given: sorted unique values for both
+  ep_chr <- ep
+  ep_chr$state <- as.character(ep_chr$state)
+  expect_equal(quiet(jn_collect(quiet(jn_lines(duck_tbl(ep_chr), drug = "state", engine = "db"))))@sequence,
+               quiet(jn_lines(ep_chr, drug = "state"))@sequence)
+  # an index date column, window and grace
+  ep$index <- as.Date("2022-03-01")
+  expect_equal(
+    quiet(jn_collect(quiet(jn_lines(duck_tbl(ep), drug = "state", drugs = lv5, index = "index",
+                                    window = 14, grace = 45, engine = "db"))))@sequence,
+    quiet(jn_lines(ep, drug = "state", drugs = lv5, index = "index", window = 14, grace = 45))@sequence
+  )
+  # month data
+  em <- jn_simulate(150, unit = "month")
+  expect_equal(
+    quiet(jn_collect(quiet(jn_lines(duck_tbl(em), drug = "state", drugs = lv5, unit = "month", engine = "db"))))@sequence,
+    quiet(jn_lines(em, drug = "state", drugs = lv5, unit = "month"))@sequence
+  )
+  # same checks
+  expect_error(quiet(jn_lines(db, drug = "state", drugs = lv5[1:2])), "not in")
+  expect_error(quiet(jn_lines(db, drug = "nope")), "not found")
+})
+
+test_that("jn_attrition gives the same table for a data frame and a lazy table", {
+  ep <- jn_simulate(300)
+  db <- duck_tbl(ep)
+  crit <- list("Drug A to C" = quote(state %in% c("Drug A", "Drug B", "Drug C")),
+               "Supply >= 28 days" = quote(end - start >= 27))
+  run <- function(d, ...) {
+    quiet(eval(as.call(c(list(quote(jn_attrition), d), crit, list(...)))))
+  }
+  ref <- run(ep)
+  for (eng in c("auto", "memory", "db")) {
+    expect_identical(run(db, engine = eng), ref, info = eng)
+  }
+  expect_identical(run(db, min_cell = 150, engine = "db"), run(ep, min_cell = 150))
+  # another id column
+  ep2 <- ep
+  names(ep2)[1] <- "pid"
+  expect_identical(
+    quiet(jn_attrition(duck_tbl(ep2), id = "pid", "Drug A" = state == "Drug A")),
+    quiet(jn_attrition(ep2, id = "pid", "Drug A" = state == "Drug A"))
+  )
+  expect_error(quiet(jn_attrition(db, state == "Drug A")), "name")
+  expect_error(quiet(jn_attrition(db, "x" = state == "Drug A", id = "nope")), "not found")
+})
+
+test_that("jn_matrix and jn_grid give the same result on a data frame and a lazy sequence", {
+  ep <- jn_simulate(300)
+  jm <- quiet(jn_sequence(ep, states = lv5, max_steps = 4))
+  jd <- quiet(jn_sequence(duck_tbl(ep), states = lv5, max_steps = 4, engine = "db"))
+  for (eng in c("auto", "memory", "db")) {
+    expect_identical(quiet(jn_matrix(jd, engine = eng)), quiet(jn_matrix(jm)), info = eng)
+    expect_identical(quiet(jn_grid(jd, n_max = 80, engine = eng)),
+                     quiet(jn_grid(jm, n_max = 80)), info = eng)
+  }
+  expect_identical(quiet(jn_matrix(jd, by_step = TRUE, min_cell = 10, engine = "db")),
+                   quiet(jn_matrix(jm, by_step = TRUE, min_cell = 10)))
+  expect_identical(quiet(jn_matrix(jd, steps = c(1, 3), engine = "db")),
+                   quiet(jn_matrix(jm, steps = c(1, 3))))
+  expect_identical(quiet(jn_grid(jd, horizon = 300, engine = "db")),
+                   quiet(jn_grid(jm, horizon = 300)))
+  # a lines journey in the database behaves the same way
+  lm <- quiet(jn_lines(ep, drug = "state", drugs = lv5))
+  ld <- quiet(jn_lines(duck_tbl(ep), drug = "state", drugs = lv5, engine = "db"))
+  expect_identical(quiet(jn_matrix(ld, engine = "db")), quiet(jn_matrix(lm)))
+  expect_identical(quiet(tbl_pathways(ld, engine = "db")), quiet(tbl_pathways(lm)))
+})
+
+test_that("the family plots read a lazy-sequence journey and draw the same figure", {
+  ep <- jn_simulate(200)
+  jm <- quiet(jn_sequence(ep, states = lv5, max_steps = 3))
+  jd <- quiet(jn_sequence(duck_tbl(ep), states = lv5, max_steps = 3, engine = "db"))
+  for (f in c("plot_transition", "plot_lasagna")) {
+    pm <- quiet(get(f)(jm))
+    pd <- quiet(get(f)(jd))
+    expect_equal(ggplot2::layer_data(pd, 1), ggplot2::layer_data(pm, 1), info = f)
+  }
+  # plot_attrition takes the small table, never the data
+  at <- quiet(jn_attrition(duck_tbl(ep), "Drug A" = state == "Drug A", engine = "db"))
+  expect_s3_class(plot_attrition(at), "ggplot")
+  expect_error(plot_attrition(duck_tbl(ep)), "jn_attrition")
+  expect_error(plot_attrition(ep), "jn_attrition")
 })

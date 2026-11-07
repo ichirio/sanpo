@@ -27,7 +27,9 @@ A \code{ggplot}.
 \description{
 Draw \code{\link[=jn_attrition]{jn_attrition()}} as a flow chart with \code{ggplot2}: one box per step
 with the patients remaining, arrows down the middle and the patients
-excluded at each step in boxes to the right.
+excluded at each step in boxes to the right. It draws the small table
+that \code{\link[=jn_attrition]{jn_attrition()}} returns (never the data), so it needs no database
+handling (see \link{engine}).
 }
 \examples{
 at <- jn_attrition(jn_simulate(300), "Drug A or B" = state \%in\% c("Drug A", "Drug B"))

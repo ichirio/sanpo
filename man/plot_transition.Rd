@@ -41,6 +41,11 @@ state at the next, the fill is the row percentage and the text the count
 empty states; a coloured key in the states' colours
 (\code{\link[=scale_colour_journey]{scale_colour_journey()}}) marks each row and column.
 }
+\details{
+The plot takes a \code{\link[=journey]{journey()}}, not a lazy table (see \link{engine}); if its
+sequence is in a database, only the small transition counts are
+collected.
+}
 \examples{
 j <- jn_sequence(jn_simulate(300), max_steps = 4)
 plot_transition(j)

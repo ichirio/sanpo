@@ -58,6 +58,10 @@ matrix_from <- function(s, j, steps, by_step, min_cell) {
 #' empty states; a coloured key in the states' colours
 #' ([scale_colour_journey()]) marks each row and column.
 #'
+#' The plot takes a [journey()], not a lazy table (see [engine]); if its
+#' sequence is in a database, only the small transition counts are
+#' collected.
+#'
 #' @inheritParams jn_matrix
 #' @param label Text in the tiles: `"n_pct"`, `"n"`, `"pct"` or `"none"`.
 #' @param label_size Text size.

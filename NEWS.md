@@ -1,5 +1,12 @@
 # sanpo (development version)
 
+## sanpo 0.0.0.9003
+
+* Journey family checked against the 2026-11-07 decision: `jn_lines()`,
+  `jn_attrition()`, `jn_matrix()` and `jn_grid()` are tested to give the
+  same result for a data frame and a DuckDB table; `?engine` lists them
+  as data preparation and the plots as taking aggregated data only.
+
 ## sanpo 0.0.0.9002
 
 * Checked against the 2026-11-07 decision (plots take aggregated data;

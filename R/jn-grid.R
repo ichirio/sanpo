@@ -92,6 +92,10 @@ grid_from <- function(s, j, n_max, horizon) {
 #' [jn_grid()]. Colours come from the states dictionary
 #' ([scale_fill_journey()]).
 #'
+#' The plot takes a [journey()], not a lazy table (see [engine]); if its
+#' sequence is in a database, only the sampled patients (at most `n_max`)
+#' are collected.
+#'
 #' @inheritParams jn_grid
 #' @param show_end Draw the end state after the last step (`FALSE` leaves
 #'   it blank).
