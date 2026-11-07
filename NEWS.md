@@ -1,5 +1,15 @@
 # sanpo (development version)
 
+## sanpo 0.0.0.9002
+
+* Checked against the 2026-11-07 decision (plots take aggregated data;
+  only data preparation runs in a database; every common function accepts
+  a data frame and a lazy table): `journey()` now accepts a lazy sequence,
+  a lazy table or data frame passed to a plot or table verb gives a clear
+  error pointing to `jn_sequence()`, `?engine` says where the engine
+  applies, and the data frame / DuckDB equivalence is tested for every
+  data verb.
+
 ## sanpo 0.0.0.9001
 
 * First minimal journey API (package name provisional; see `DECISIONS.md`):

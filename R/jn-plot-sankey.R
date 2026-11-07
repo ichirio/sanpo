@@ -10,8 +10,9 @@
 #' patient is in at a step is still drawn as a thin node labelled `0`
 #' (the end and gap states are not drawn empty).
 #'
-#' A journey whose sequence is in a database is aggregated there (see
-#' [engine]); only the node and flow counts are collected.
+#' Plots draw aggregated data and take a [journey()], not a lazy table (see
+#' [engine]). If the journey's sequence is in a database, only the node and
+#' flow counts are collected.
 #'
 #' @param j A [journey()].
 #' @param steps Steps to show (`NULL` = all).

@@ -121,6 +121,61 @@ pushed the 10M-row peak to 10.7 GB. The partitioned / vectorised split
 estimate (2.58 GB for a 1.3 GB estimate), which is why the default limit
 (2 GB) is well below the RAM of a typical PC.
 
+## Two stages: data preparation and plots (decided 2026-11-07)
+
+The maintainer decided:
+
+1. **Plots receive aggregated data** (nodes / links, trees, pathway counts),
+   which always fits in memory. Plot functions need no lazy or database
+   handling and no `engine` argument.
+2. **Lazy / database processing belongs only to the steps before that**:
+   episode records -> per-patient sequence -> nodes / links and other
+   aggregates.
+3. **Study-specific definitions are made by the user**, before the package
+   or through arguments: which drugs count as treatment, how a treatment's
+   end is decided, how "No Treatment" is defined. The package provides only
+   the common mechanics -- ordering per patient, gap / grace judgement,
+   inserting a no-treatment state, collapsing repeats, counting steps --
+   and, later, small separate building-block functions, not one function
+   with every definition as arguments.
+4. **Every common function accepts both a `tbl()` (lazy table) and a
+   `data.frame` and gives the same result.** Tested against DuckDB.
+
+How this is applied (checked 2026-11-07):
+
+| Stage | Functions | Input | Engine |
+|---|---|---|---|
+| Data preparation | `jn_sequence()` | episodes: data frame or lazy table | yes (`engine`, `memory_limit`) |
+| Data preparation | `jn_flows()`, `jn_tree()`, `tbl_pathways()` | a journey whose sequence is a data frame or a lazy table | yes |
+| Data preparation | `journey()`, `jn_collect()`, `jn_size()` | data frame or lazy table (a journey for the last two) | no argument; `jn_collect()` / `jn_size()` take `memory_limit` |
+| Dictionary / helpers | `jn_states()`, `jn_simulate()`, `scale_fill_journey()`, `theme_journey()` | small objects | not applicable |
+| Plot | `plot_sankey()`, `plot_sunburst()`, `plot_icicle()` | a journey (the plot collects the small aggregate itself) | none |
+
+- Plot functions take a journey, not a lazy table; a lazy table or data
+  frame passed to a plot (or to a table verb) gives an error that names
+  `jn_sequence()`.
+- Plots still read a journey whose sequence is in the database, and call the
+  same aggregating code as the data verbs (`journey_data()`), which
+  collects only counts. That one call is kept, not removed: it is the way a
+  plot gets its aggregate from a database-backed journey (a journey is
+  the data contract, so a plot cannot be handed the aggregate separately
+  without a second public data class), and it is not duplicated database
+  code. Plots have no `engine` / `memory_limit` arguments.
+- `?engine` now says where the engine applies and where it does not.
+- Nothing in `R/` is study-specific; `jn_sequence()` already follows
+  point 3 (states and `gap_state` / `end_state` come from the user).
+
+Next candidates (not built; each needs its own issue):
+
+- OMOP CDM conversion (OMOP `drug_exposure` / `drug_era` -> episodes), as a
+  separate building block outside the common mechanics.
+- Combination-regimen and line-of-therapy rules beyond the current ones
+  (other add-on / switch / washout definitions, user-supplied rules as
+  small building-block functions).
+- Further small building blocks on the common mechanics: gap / grace
+  judgement as its own function, no-treatment state insertion, repeat
+  collapsing, step counting.
+
 ## Open (needs a decision from the user)
 
 1. **Package name**: provisional (see choice 8); to be chosen after the

@@ -53,6 +53,11 @@ whose size is its share of all patients, children ordered by the states
 dictionary inside their parent. The sunburst is the icicle in
 \code{\link[ggplot2:coord_radial]{ggplot2::coord_radial()}}.
 }
+\details{
+The tree is aggregated from the journey (see \code{\link[=jn_tree]{jn_tree()}}); a journey
+whose sequence is in a database is aggregated there and only the small
+tree is collected. Pass a \code{\link[=journey]{journey()}}, not a lazy table (see \link{engine}).
+}
 \examples{
 j <- jn_sequence(jn_simulate(500), max_steps = 3)
 plot_sunburst(j)
