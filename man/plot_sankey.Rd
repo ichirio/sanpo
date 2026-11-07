@@ -51,8 +51,9 @@ Node order and colours come from the states dictionary, so they match
 patient is in at a step is still drawn as a thin node labelled \code{0}
 (the end and gap states are not drawn empty).
 
-A journey whose sequence is in a database is aggregated there (see
-\link{engine}); only the node and flow counts are collected.
+Plots draw aggregated data and take a \code{\link[=journey]{journey()}}, not a lazy table (see
+\link{engine}). If the journey's sequence is in a database, only the node and
+flow counts are collected.
 }
 \examples{
 j <- jn_sequence(jn_simulate(500), max_steps = 3)

@@ -6,6 +6,10 @@
 #' dictionary inside their parent. The sunburst is the icicle in
 #' [ggplot2::coord_radial()].
 #'
+#' The tree is aggregated from the journey (see [jn_tree()]); a journey
+#' whose sequence is in a database is aggregated there and only the small
+#' tree is collected. Pass a [journey()], not a lazy table (see [engine]).
+#'
 #' @param j A [journey()].
 #' @param steps Number of steps (rings or columns) to show; a vector uses
 #'   its maximum. `NULL` = all.

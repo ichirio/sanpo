@@ -1,10 +1,25 @@
 #' Where the data verbs run: memory or database
 #'
-#' Every data verb (`jn_sequence()`, `jn_flows()`, `jn_tree()`,
-#' `tbl_pathways()`, ...) accepts a data frame or a lazy database table
-#' (a `dbplyr` `tbl_lazy`, for example from DuckDB) and runs the same
-#' `dplyr` code on either. The `engine` argument says where the work is
-#' done:
+#' The package works in two stages, and `engine` belongs to the first one
+#' only.
+#'
+#' **Data preparation (the engine applies).** The steps from episode
+#' records to a per-patient sequence and on to nodes, links and other
+#' aggregates: [jn_sequence()] (episode data in), and [jn_flows()],
+#' [jn_tree()] and [tbl_pathways()] (a [journey()] in). The data, or the
+#' journey's sequence, may be a data frame or a lazy database table (a
+#' `dbplyr` `tbl_lazy`, for example from DuckDB); the same `dplyr` code
+#' runs on either and gives the same result. [journey()],
+#' [jn_collect()] and [jn_size()] accept both as well.
+#'
+#' **Plots (the engine does not apply).** `plot_*()` draw aggregated data,
+#' which always fits in memory, so they have no `engine` or `memory_limit`
+#' argument and never take a lazy table: pass a [journey()]. If its
+#' sequence is in a database, the plot collects only the small aggregate
+#' (node counts, flows, pathway counts) through the verbs above. Passing a lazy table (or a data
+#' frame of episodes) to a plot gives an error that names [jn_sequence()].
+#'
+#' The `engine` argument says where the data preparation is done:
 #'
 #' * `"memory"`: collect the data into R first (refused when the size
 #'   estimate is above `memory_limit`).

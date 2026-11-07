@@ -26,13 +26,27 @@ memory: a number of bytes or a string such as \code{"500MB"} or \code{"2GB"}
 \code{jn_collect()} returns the journey with its sequence in memory.
 }
 \description{
-Every data verb (\code{jn_sequence()}, \code{jn_flows()}, \code{jn_tree()},
-\code{tbl_pathways()}, ...) accepts a data frame or a lazy database table
-(a \code{dbplyr} \code{tbl_lazy}, for example from DuckDB) and runs the same
-\code{dplyr} code on either. The \code{engine} argument says where the work is
-done:
+The package works in two stages, and \code{engine} belongs to the first one
+only.
 }
 \details{
+\strong{Data preparation (the engine applies).} The steps from episode
+records to a per-patient sequence and on to nodes, links and other
+aggregates: \code{\link[=jn_sequence]{jn_sequence()}} (episode data in), and \code{\link[=jn_flows]{jn_flows()}},
+\code{\link[=jn_tree]{jn_tree()}} and \code{\link[=tbl_pathways]{tbl_pathways()}} (a \code{\link[=journey]{journey()}} in). The data, or the
+journey's sequence, may be a data frame or a lazy database table (a
+\code{dbplyr} \code{tbl_lazy}, for example from DuckDB); the same \code{dplyr} code
+runs on either and gives the same result. \code{\link[=journey]{journey()}},
+\code{\link[=jn_collect]{jn_collect()}} and \code{\link[=jn_size]{jn_size()}} accept both as well.
+
+\strong{Plots (the engine does not apply).} \verb{plot_*()} draw aggregated data,
+which always fits in memory, so they have no \code{engine} or \code{memory_limit}
+argument and never take a lazy table: pass a \code{\link[=journey]{journey()}}. If its
+sequence is in a database, the plot collects only the small aggregate
+(node counts, flows, pathway counts) through the verbs above. Passing a lazy table (or a data
+frame of episodes) to a plot gives an error that names \code{\link[=jn_sequence]{jn_sequence()}}.
+
+The \code{engine} argument says where the data preparation is done:
 \itemize{
 \item \code{"memory"}: collect the data into R first (refused when the size
 estimate is above \code{memory_limit}).
