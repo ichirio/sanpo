@@ -58,6 +58,27 @@ plot_icicle(j, steps = 3)        # the same rectangles as the sunburst
 tbl_pathways(j, min_cell = 10)   # counts below 10 shown as "<10"
 ```
 
+## Same code in memory and in a database
+
+Every data verb takes a data frame or a lazy database table (`dbplyr`,
+for example DuckDB) and runs the same `dplyr` code on both, with the same
+result. `engine = "auto"` (default) counts the rows in the database,
+estimates their size in memory and collects them only when they fit under
+the memory limit; otherwise the work stays in the database and only the
+aggregated nodes, flows and pathway counts are collected.
+
+```r
+con <- DBI::dbConnect(duckdb::duckdb())
+ep_db <- dplyr::copy_to(con, ep, "episodes")          # a lazy table
+j_db <- jn_sequence(ep_db, states = paste("Drug", LETTERS[1:5]))
+#> jn_sequence(): engine = memory (lazy table, 11,746 rows, about 1.7 MB; limit 2.0 GB); collected
+
+options(sanpo.memory_limit = "8GB")    # production: only the setting changes
+j_db <- jn_sequence(ep_db, states = paste("Drug", LETTERS[1:5]), engine = "db")
+plot_sankey(j_db)                      # aggregated in the database
+jn_collect(j_db)                       # bring the sequence into memory (checked against the limit)
+```
+
 The colours come from the states dictionary (`jn_states()`) through
 `scale_fill_journey()`, so a state has the same colour in every figure.
 

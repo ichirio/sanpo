@@ -4,13 +4,22 @@
 \alias{jn_flows}
 \title{Flows between steps}
 \usage{
-jn_flows(j, steps = NULL)
+jn_flows(
+  j,
+  steps = NULL,
+  engine = c("auto", "db", "memory"),
+  memory_limit = NULL
+)
 }
 \arguments{
 \item{j}{A \code{\link[=journey]{journey()}}.}
 
 \item{steps}{Steps to use (\code{NULL} = all). Flows run between successive
 elements, so \code{steps = c(1, 3)} gives the flows from step 1 to step 3.}
+
+\item{engine}{\code{"auto"}, \code{"db"} or \code{"memory"}; see \link{engine}.}
+
+\item{memory_limit}{Largest size collected into memory; see \link{engine}.}
 }
 \value{
 A data frame with columns \code{step_from}, \code{step_to}, \code{from}, \code{to}
@@ -21,6 +30,11 @@ patients in \code{from} at \code{step_from}).
 Count the patients who move from each state at one step to each state at
 the next. All pairs of levels are returned, including pairs with \code{n = 0},
 so empty nodes and empty flows are explicit rows.
+}
+\details{
+The counts are made with the same \code{dplyr} code on a sequence in memory
+and on a sequence in a database (see \link{engine}); only the aggregated
+counts are collected.
 }
 \examples{
 j <- jn_sequence(jn_simulate(200), max_steps = 3)

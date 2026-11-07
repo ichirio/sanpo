@@ -87,8 +87,16 @@ jn_sequence_cols <- c("patient_id", "step", "state", "start", "end")
 #' `as.data.frame()` (the sequence) and `plot()` ([plot_sankey()]). Other
 #' packages can add methods for `class_journey` with [S7::method()].
 #'
-#' @param sequence A data frame with columns `patient_id`, `step` (integer,
-#'   from 1 without holes), `state`, `start` and `end`.
+#' The sequence is usually a data frame. When [jn_sequence()] runs in a
+#' database and the sequence is above the memory limit (see [engine]), it
+#' stays a lazy table (`state` then is character; the dictionary still
+#' gives the levels), the data verbs aggregate it in the database, and
+#' [jn_collect()] brings it into memory.
+#'
+#' @param sequence A data frame or a lazy table with columns `patient_id`,
+#'   `step` (integer, from 1 without holes), `state`, `start` and `end`. A
+#'   lazy table stays in the database (give `states`, since a database has
+#'   no factor levels).
 #' @param states A [jn_states()] dictionary, a character vector of levels,
 #'   or `NULL` to use the levels of `sequence$state` (factor) or its sorted
 #'   unique values.
@@ -108,8 +116,9 @@ jn_sequence_cols <- c("patient_id", "step", "state", "start", "end")
 #' @export
 journey <- function(sequence, states = NULL, meta = list()) {
   need <- jn_sequence_cols
+  if (is_lazy(sequence)) return(journey_lazy(sequence, states, meta))
   if (!is.data.frame(sequence) || !all(need %in% names(sequence))) {
-    cli::cli_abort("{.arg sequence} must be a data frame with columns {.val {need}}.")
+    cli::cli_abort("{.arg sequence} must be a data frame or a lazy table with columns {.val {need}}.")
   }
   if (is.null(states)) {
     lv <- if (is.factor(sequence$state)) levels(sequence$state) else sort(unique(as.character(sequence$state)))
@@ -140,12 +149,16 @@ journey <- function(sequence, states = NULL, meta = list()) {
 class_journey <- S7::new_class(
   "journey",
   properties = list(
-    sequence = S7::class_data.frame,
+    sequence = S7::new_union(S7::class_data.frame, S7::new_S3_class("tbl_lazy")),
     states = S7::class_data.frame,
     meta = S7::class_list,
     n_persons = S7::new_property(
       S7::class_integer,
-      getter = function(self) length(unique(self@sequence$patient_id))
+      getter = function(self) {
+        s <- self@sequence
+        if (!is_lazy(s)) return(length(unique(s$patient_id)))
+        as.integer(count_rows(dplyr::distinct(s, patient_id)))
+      }
     )
   ),
   validator = function(self) {
@@ -157,10 +170,15 @@ class_journey <- S7::new_class(
     if (anyNA(st$level) || anyDuplicated(st$level)) {
       return("@states$level must be unique and non-missing.")
     }
-    miss <- setdiff(jn_sequence_cols, names(sq))
+    miss <- setdiff(jn_sequence_cols, colnames(sq))
     if (length(miss) > 0) {
       return(paste0("@sequence lacks column(s): ", paste(miss, collapse = ", "), "."))
     }
+    if (length(self@meta) > 0 && is.null(names(self@meta))) {
+      return("@meta must be a named list.")
+    }
+    # a lazy sequence is checked by the verb that built it (jn_sequence())
+    if (is_lazy(sq)) return(NULL)
     if (!is.factor(sq$state) || !identical(levels(sq$state), st$level)) {
       return("@sequence$state must be a factor with the levels of @states$level.")
     }
@@ -174,19 +192,55 @@ class_journey <- S7::new_class(
         return("@sequence$step must run 1, 2, 3, ... within each patient (rows sorted by patient and step).")
       }
     }
-    if (length(self@meta) > 0 && is.null(names(self@meta))) {
-      return("@meta must be a named list.")
-    }
     NULL
   }
 )
 
+# journey() on a lazy sequence: same checks as for a data frame, done in the
+# database (the sequence stays lazy; `state` is character there). The caller
+# is responsible for step 1, 2, 3, ... within each patient, as for a data
+# frame; only the cheap aggregate checks are run here.
+journey_lazy <- function(sequence, states, meta) {
+  need <- jn_sequence_cols
+  miss <- setdiff(need, colnames(sequence))
+  if (length(miss) > 0) {
+    cli::cli_abort("{.arg sequence} must be a data frame or a lazy table with columns {.val {need}}.")
+  }
+  sequence <- dplyr::select(dplyr::ungroup(sequence), dplyr::all_of(need))
+  sequence <- dplyr::mutate(sequence, state = as.character(state),
+                            step = as.integer(step))
+  states <- if (is.null(states)) jn_states(sort(distinct_values(sequence, "state"))) else as_jn_states(states)
+  bad <- setdiff(distinct_values(sequence, "state"), states$level)
+  if (length(bad) > 0) {
+    cli::cli_abort("State{?s} {.val {bad}} {?is/are} not in the states dictionary.")
+  }
+  if (count_where(sequence, is.na(patient_id) | is.na(step) | step < 1L) > 0) {
+    cli::cli_abort("{.field patient_id} and {.field step} must not be missing and {.field step} must be >= 1.")
+  }
+  meta$n_persons <- NULL
+  seq_to_journey(sequence, states, meta)
+}
+
+# A sequence from jn_sequence() (data frame or lazy table) -> journey.
+seq_to_journey <- function(sequence, states, meta) {
+  if (!is_lazy(sequence)) {
+    sequence <- as.data.frame(sequence, stringsAsFactors = FALSE)
+    return(journey(sequence, states, meta))
+  }
+  sequence <- dplyr::select(sequence, dplyr::all_of(jn_sequence_cols))
+  tryCatch(
+    class_journey(sequence = sequence, states = states, meta = meta),
+    error = function(e) cli::cli_abort(conditionMessage(e), call = NULL)
+  )
+}
+
 S7::method(print, class_journey) <- function(x, ...) {
   m <- x@meta
-  cat(cli::format_inline("<journey> {x@n_persons} patient{?s}, {nrow(x@sequence)} step row{?s}, {nrow(x@states)} state{?s}"), "\n", sep = "")
-  used <- table(x@sequence$state)
+  where <- if (is_lazy(x@sequence)) " (sequence in the database)" else ""
+  cat(cli::format_inline("<journey> {x@n_persons} patient{?s}, {count_rows(x@sequence)} step row{?s}, {nrow(x@states)} state{?s}{where}"), "\n", sep = "")
   lv <- x@states$level
-  empty <- lv[used[lv] == 0]
+  used <- node_counts(x@sequence, lv)
+  empty <- lv[tapply(used$n, used$state, sum)[lv] == 0]
   cat(cli::format_inline("States (node order): {.val {lv}}"), "\n", sep = "")
   if (length(empty) > 0) cat(cli::format_inline("Empty states: {.val {empty}}"), "\n", sep = "")
   if (length(m) > 0) {
@@ -199,33 +253,28 @@ S7::method(print, class_journey) <- function(x, ...) {
 }
 
 S7::method(summary, class_journey) <- function(object, ...) {
-  out <- jn_nodes(object)
+  out <- node_counts(object@sequence, object@states$level)
   out$pct <- out$n / object@n_persons
   out
 }
 
 S7::method(as.data.frame, class_journey) <- function(x, ...) { # nolint: object_name_linter.
-  x@sequence
+  jn_collect(x)@sequence
 }
 
 S7::method(plot, class_journey) <- function(x, ...) {
   plot_sankey(x, ...)
 }
 
-# person x step matrix of integer state codes (NA after a patient's last
-# step). Rows follow the order of unique patient ids.
-jn_state_matrix <- function(j) {
-  s <- j@sequence
-  pid <- match(s$patient_id, unique(s$patient_id))
-  n_steps <- if (nrow(s) == 0) 0L else max(s$step)
-  m <- matrix(NA_integer_, nrow = max(c(0L, pid)), ncol = n_steps)
-  m[cbind(pid, s$step)] <- as.integer(s$state)
-  m
-}
-
 check_journey <- function(j, arg = "j") {
   if (!S7::S7_inherits(j, class_journey)) {
-    cli::cli_abort("{.arg {arg}} must be a journey (see {.fn jn_sequence}).")
+    if (is_lazy(j) || is.data.frame(j)) {
+      cli::cli_abort(c(
+        "{.arg {arg}} must be a journey, not {if (is_lazy(j)) 'a lazy table' else 'a data frame'}.",
+        i = "Episode data are turned into a journey by {.fn jn_sequence}, which also accepts a lazy table and runs in the database; draw and tabulate the journey."
+      ), call = NULL)
+    }
+    cli::cli_abort("{.arg {arg}} must be a journey (see {.fn jn_sequence}).", call = NULL)
   }
   invisible(j)
 }
